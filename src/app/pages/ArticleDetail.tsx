@@ -10,6 +10,7 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Separator } from '../components/ui/separator';
+import { useServiceDesk } from '../store/serviceDeskStore';
 
 // Sample article data — in production this would come from an API
 const articlesData: Record<string, {
@@ -165,26 +166,28 @@ const DefaultArticleContent = () => (
 
 export function ArticleDetail() {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
+  const { ticketId } = useParams<{ ticketId: string }>();
   const [showMore, setShowMore] = useState(false);
+  const { tickets, ticketArticles, getOrCreateTicketArticle } = useServiceDesk();
 
-  const article = id ? articlesData[id] : null;
+  const ticket = tickets.find((t) => t.id === ticketId);
+  const kb = ticketId ? (ticketArticles[ticketId] ?? getOrCreateTicketArticle({ ticketId })) : null;
 
-  // Use article data if found, or fallback to article ID 1 data shape
-  const data = article ?? {
-    id: parseInt(id || '1'),
-    title: 'EPSS Backup Clone issue',
-    category: 'No Category',
-    views: 2,
-    author: 'abreham tayu',
-    authorInitials: 'AT',
-    authorColor: '#7c3aed',
-    createdDate: 'October 6, 2025',
-    updatedDate: 'March 19, 2026',
-    status: 'Published',
-    readTime: '4 min read',
-    content: null,
-  };
+  const data = kb
+    ? {
+        title: kb.title,
+        category: kb.project,
+        views: 0,
+        author: "System",
+        authorInitials: "SY",
+        authorColor: "#6c757d",
+        createdDate: new Date(kb.createdAt).toLocaleDateString(),
+        updatedDate: new Date(kb.updatedAt).toLocaleDateString(),
+        status: kb.status,
+        readTime: "—",
+        content: kb.content,
+      }
+    : null;
 
   return (
     <div className="min-h-full bg-muted/30 flex flex-col">
@@ -192,7 +195,7 @@ export function ArticleDetail() {
       {/* Breadcrumb / Top Nav */}
       <div className="bg-background border-b px-6 h-[44px] flex items-center gap-2 flex-shrink-0">
         <Button
-          onClick={() => navigate('/knowledge')}
+          onClick={() => navigate(ticket ? `/knowledge/project/${ticket.project}` : '/knowledge')}
           variant="ghost"
           size="sm"
           className="h-auto gap-1.5 p-0 text-[12px]"
@@ -201,17 +204,30 @@ export function ArticleDetail() {
           Back to Knowledge Base
         </Button>
         <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-        <span className="text-[12px] text-muted-foreground truncate max-w-xs">{data.title}</span>
+        <span className="text-[12px] text-muted-foreground truncate max-w-xs">{data?.title ?? `Ticket #${ticketId}`}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        {!ticket || !data ? (
+          <div className="p-6">
+            <Card className="mx-auto max-w-3xl">
+              <CardHeader>
+                <CardTitle className="text-[14px]">Article not found</CardTitle>
+              </CardHeader>
+              <CardContent className="text-[13px] text-muted-foreground">
+                This ticket or its knowledge article could not be loaded.
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+        <div className="flex flex-col">
         {/* Hero Header */}
       <div className="bg-primary px-6 py-7">
           <div className="max-w-4xl mx-auto">
             {/* Meta row */}
             <div className="flex items-center gap-3 mb-4">
               <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-medium bg-white/10 text-white/80 border border-white/10">
-                {data.category}
+                Project: {data.category} · Ticket: #{ticket.id}
               </span>
               <div className="flex items-center gap-1 text-white/50 text-[12px]">
                 <Eye className="w-3.5 h-3.5" />
@@ -276,7 +292,7 @@ export function ArticleDetail() {
                       Print
                     </Button>
                     <Button
-                      onClick={() => navigate(`/knowledge/edit/${data.id}`)}
+                      onClick={() => navigate(`/knowledge/edit/${ticket.id}`)}
                       size="sm"
                       className="h-7 gap-1.5 px-3 text-[12px]"
                     >
@@ -288,7 +304,7 @@ export function ArticleDetail() {
 
                 {/* Rendered content */}
                 <CardContent className="p-6">
-                  <DefaultArticleContent />
+                  <pre className="whitespace-pre-wrap font-sans text-[13px] text-muted-foreground">{data.content || ''}</pre>
                 </CardContent>
               </Card>
             </div>
@@ -314,7 +330,7 @@ export function ArticleDetail() {
                     </div>
                   </div>
                   <div>
-                    <div className="text-[11px] text-muted-foreground mb-0.5">Category</div>
+                    <div className="text-[11px] text-muted-foreground mb-0.5">Project</div>
                     <span className="inline-flex items-center gap-1 text-[12px] text-muted-foreground">
                       <Tag className="w-3 h-3" />
                       {data.category}
@@ -382,12 +398,11 @@ export function ArticleDetail() {
                 <CardContent className="p-0">
                 <div className="space-y-2.5">
                   {[
-                    { id: 5, title: 'EPSS Data Domain — lost volume recovery', date: 'Oct 6, 2025' },
-                    { id: 7, title: 'ESLSE Active Directory configuration', date: 'Oct 5, 2025' },
+                    { ticketId: ticket?.id ?? "00135", title: 'Ticket article', date: '—' },
                   ].map(rel => (
                     <Button
-                      key={rel.id}
-                      onClick={() => navigate(`/knowledge/${rel.id}`)}
+                      key={rel.ticketId}
+                      onClick={() => navigate(`/knowledge/ticket/${rel.ticketId}`)}
                       variant="ghost"
                       className="h-auto w-full justify-start p-0 text-left"
                     >
@@ -403,6 +418,8 @@ export function ArticleDetail() {
             </div>
           </div>
         </div>
+        </div>
+        )}
       </div>
     </div>
   );

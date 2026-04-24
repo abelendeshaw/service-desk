@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import {
   ArrowLeft, MessageSquare, StickyNote, TrendingUp,
   X, Trash2, BookOpen, Plus, Users, UserPlus,
@@ -16,49 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Separator } from '../components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Textarea } from '../components/ui/textarea';
-
-const timeline = [
-  {
-    id: 1,
-    type: 'created',
-    author: 'EPSS Client',
-    initials: 'EC',
-    color: '#7c3aed',
-    time: '41 days ago',
-    content: 'Ticket created',
-    detail: 'All active devices are accessed through only through cables so, now we want to access through WIFI.',
-  },
-  {
-    id: 2,
-    type: 'assigned',
-    author: 'System',
-    initials: 'SY',
-    color: '#6c757d',
-    time: '41 days ago',
-    content: 'Assigned to Wongel Wondyifraw',
-    detail: null,
-  },
-  {
-    id: 3,
-    type: 'comment',
-    author: 'Wongel Wondyifraw',
-    initials: 'WW',
-    color: '#1d4ed8',
-    time: '40 days ago',
-    content: 'Onsite visit scheduled for next week. Will assess the network infrastructure and WiFi coverage requirements.',
-    detail: null,
-  },
-  {
-    id: 4,
-    type: 'status',
-    author: 'System',
-    initials: 'SY',
-    color: '#6c757d',
-    time: '38 days ago',
-    content: 'Status changed to Closed',
-    detail: null,
-  },
-];
+import { useServiceDesk } from '../store/serviceDeskStore';
 
 const iconMap: Record<string, any> = {
   created: MessageSquare,
@@ -69,25 +27,42 @@ const iconMap: Record<string, any> = {
 
 export function TicketDetail() {
   const navigate = useNavigate();
+  const params = useParams();
+  const ticketId = (params.id ?? '').replace('#', '');
+  const { tickets, engineers, assignTicket, updateTicketStatus, escalateTicket, addTicketComment } = useServiceDesk();
+  const ticket = tickets.find((t) => t.id === ticketId);
   const [activeTab, setActiveTab] = useState<'activity' | 'notes'>('activity');
   const [comment, setComment] = useState('');
   const [status, setStatus] = useState('Open');
   const [priority, setPriority] = useState('');
 
-  const statusOptions = ['Open', 'Pending', 'Escalated', 'Closed'];
+  const statusOptions = ['Open', 'In Progress', 'Escalated', 'Resolved', 'Closed'];
   const priorityOptions = ['Critical', 'High', 'Medium', 'Low'];
 
   const statusColors: Record<string, { className: string; dotClass: string }> = {
     Open: { className: 'bg-blue-50 text-blue-700 border-blue-200', dotClass: 'bg-blue-500' },
-    Pending: { className: 'bg-amber-50 text-amber-700 border-amber-200', dotClass: 'bg-amber-500' },
+    "In Progress": { className: 'bg-amber-50 text-amber-700 border-amber-200', dotClass: 'bg-amber-500' },
     Escalated: { className: 'bg-red-50 text-red-700 border-red-200', dotClass: 'bg-red-500' },
+    Resolved: { className: 'bg-emerald-50 text-emerald-700 border-emerald-200', dotClass: 'bg-emerald-500' },
     Closed: { className: 'bg-muted text-muted-foreground border-border', dotClass: 'bg-muted-foreground' },
   };
 
-  const sc = statusColors[status];
+  React.useEffect(() => {
+    if (!ticket) return;
+    setStatus(ticket.status);
+    setPriority(ticket.priority ?? '');
+  }, [ticket]);
+
+  const sc = statusColors[status] ?? statusColors.Open;
 
   return (
     <div className="flex h-full flex-col bg-muted/30">
+      {!ticket ? (
+        <div className="flex flex-1 items-center justify-center p-6">
+          <div className="text-[13px] text-muted-foreground">Ticket not found.</div>
+        </div>
+      ) : (
+      <>
       {/* Top Action Bar */}
       <div className="flex h-[48px] shrink-0 items-center gap-1 border-b bg-background px-6">
         <Button
@@ -103,26 +78,24 @@ export function TicketDetail() {
         <Separator orientation="vertical" className="mx-1 h-4" />
 
         <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-        <span className="px-1 text-[12px] text-muted-foreground">#00135</span>
+        <span className="px-1 text-[12px] text-muted-foreground">#{ticket.id}</span>
 
         <Separator orientation="vertical" className="mx-1 h-4" />
 
-        {[
-          { icon: MessageSquare, label: 'Comment' },
-          { icon: StickyNote, label: 'Note' },
-          { icon: TrendingUp, label: 'Escalate' },
-          { icon: BookOpen, label: 'KB Article' },
-        ].map(({ icon: Icon, label }) => (
-          <Button
-            key={label}
-            variant="ghost"
-            size="sm"
-            className="h-7 gap-1.5 px-2.5 text-[12px]"
-          >
-            <Icon className="w-3.5 h-3.5" />
-            {label}
-          </Button>
-        ))}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1.5 px-2.5 text-[12px]"
+          onClick={() => {
+            const reason = window.prompt("Escalation reason?");
+            if (!reason) return;
+            escalateTicket({ ticketId: ticket.id, target: "Support Manager", reason });
+            setStatus("Escalated");
+          }}
+        >
+          <TrendingUp className="w-3.5 h-3.5" />
+          Escalate
+        </Button>
 
         <div className="ml-auto flex items-center gap-1">
           <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2.5 text-[12px] text-red-600 hover:text-red-700">
@@ -144,31 +117,31 @@ export function TicketDetail() {
           <Card className="p-5">
             <div className="flex items-start gap-4">
               <Avatar className="size-10 rounded-lg">
-                <AvatarFallback className="rounded-lg bg-violet-600 text-[13px] font-semibold text-white">EP</AvatarFallback>
+                <AvatarFallback className="rounded-lg bg-violet-600 text-[13px] font-semibold text-white">
+                  {ticket.project.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">#00135</span>
+                  <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">#{ticket.id}</span>
                   <Badge variant="outline" className={`gap-1.5 text-[11px] ${sc.className}`}>
                     <span className={`size-1.5 rounded-full ${sc.dotClass}`} />
                     {status}
                   </Badge>
                 </div>
-                <h1 className="text-[16px] leading-snug font-semibold">
-                  Diredawa site Access FortiGate, Cisco Switch and server access through WiFi
-                </h1>
+                <h1 className="text-[16px] leading-snug font-semibold">{ticket.subject}</h1>
                 <div className="mt-2 flex items-center gap-4 text-[12px] text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5" />
-                    Created 41 days ago
+                    Created {new Date(ticket.createdAt).toLocaleDateString()}
                   </div>
                   <div className="flex items-center gap-1">
                     <Building2 className="w-3.5 h-3.5" />
-                    EPSS Client
+                    {ticket.project}
                   </div>
                   <div className="flex items-center gap-1 text-red-600">
                     <AlertTriangle className="w-3.5 h-3.5" />
-                    Resolution due 2026-02-04
+                    {ticket.resolutionDueDate ? `Resolution due ${ticket.resolutionDueDate}` : 'No due date'}
                   </div>
                 </div>
               </div>
@@ -179,9 +152,7 @@ export function TicketDetail() {
           <Card className="p-5">
             <h3 className="mb-3 text-[13px] font-semibold">Description</h3>
             <p className="text-[13px] leading-relaxed text-muted-foreground">
-              All active devices are accessed through only through cables so, now we want to access through WIFI.
-              The site requires full WiFi coverage across the FortiGate firewall, Cisco switches, and all active server
-              infrastructure to enable wireless management access.
+              {ticket.description}
             </p>
           </Card>
 
@@ -280,7 +251,7 @@ export function TicketDetail() {
             </CardHeader>
 
             <div className="p-5 space-y-5">
-              {timeline.map((item, i) => {
+              {[...ticket.activity].slice(0, 30).map((item, i) => {
                 const Icon = iconMap[item.type] || MessageSquare;
                 return (
                   <div key={item.id} className="flex gap-3">
@@ -288,24 +259,24 @@ export function TicketDetail() {
                       <Avatar className="size-7">
                         <AvatarFallback
                           className="text-[10px] font-semibold text-white"
-                          style={{ backgroundColor: item.color }}
+                          style={{ backgroundColor: '#6c757d' }}
                         >
-                          {item.initials}
+                          SY
                         </AvatarFallback>
                       </Avatar>
-                      {i < timeline.length - 1 && <div className="mt-2 w-px flex-1 bg-border" />}
+                      {i < ticket.activity.length - 1 && <div className="mt-2 w-px flex-1 bg-border" />}
                     </div>
                     <div className="flex-1 min-w-0 pb-2">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[13px] font-medium">{item.author}</span>
-                        <span className="text-[11px] text-muted-foreground">{item.time}</span>
+                        <span className="text-[13px] font-medium">{item.type}</span>
+                        <span className="text-[11px] text-muted-foreground">{new Date(item.createdAt).toLocaleString()}</span>
                       </div>
-                      {item.detail ? (
+                      {"detail" in item && item.detail ? (
                         <div className="rounded-md bg-muted p-3 text-[13px] leading-relaxed text-muted-foreground">
                           {item.detail}
                         </div>
                       ) : (
-                        <div className="text-[12px] text-muted-foreground">{item.content}</div>
+                        <div className="text-[12px] text-muted-foreground">{item.type}</div>
                       )}
                     </div>
                   </div>
@@ -329,7 +300,15 @@ export function TicketDetail() {
                       <Paperclip className="w-3.5 h-3.5" />
                     </Button>
                   </div>
-                  <Button size="sm" className="h-7 gap-1.5 px-3 text-[12px]">
+                  <Button
+                    size="sm"
+                    className="h-7 gap-1.5 px-3 text-[12px]"
+                    onClick={() => {
+                      if (!comment.trim()) return;
+                      addTicketComment({ ticketId: ticket.id, body: comment.trim(), internal: false, attachments: [] });
+                      setComment('');
+                    }}
+                  >
                     <Send className="w-3 h-3" />
                     Send
                   </Button>
@@ -348,7 +327,13 @@ export function TicketDetail() {
               {/* Status */}
               <div>
                 <div className="mb-1 text-[11px] text-muted-foreground">Status</div>
-                <Select value={status} onValueChange={setStatus}>
+                <Select
+                  value={status}
+                  onValueChange={(v) => {
+                    setStatus(v);
+                    updateTicketStatus({ ticketId: ticket.id, status: v as any });
+                  }}
+                >
                   <SelectTrigger className="h-8 text-[12px]">
                     <SelectValue />
                   </SelectTrigger>
@@ -394,12 +379,22 @@ export function TicketDetail() {
                 </Select>
               </div>
 
-              {/* Teams */}
               <div>
-                <div className="mb-1 text-[11px] text-muted-foreground">Team</div>
-                <Select defaultValue="END">
+                <div className="mb-1 text-[11px] text-muted-foreground">Assigned Engineer</div>
+                <Select
+                  value={ticket.assignedEngineerId ?? 'unassigned'}
+                  onValueChange={(v) => {
+                    if (v === 'unassigned') return;
+                    assignTicket({ ticketId: ticket.id, engineerId: v });
+                  }}
+                >
                   <SelectTrigger className="h-8 text-[12px]"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="END">END</SelectItem></SelectContent>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    {engineers.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
 
@@ -426,6 +421,8 @@ export function TicketDetail() {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

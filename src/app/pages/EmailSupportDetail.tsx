@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import {
   ArrowLeft,
@@ -33,93 +33,36 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Separator } from '../components/ui/separator';
 import { Textarea } from '../components/ui/textarea';
 import { RowActionsMenu } from '../components/RowActionsMenu';
+import { useServiceDesk } from '../store/serviceDeskStore';
 
-const emailThread = [
-  {
-    id: 1,
-    from: 'EPSS Client',
-    fromEmail: 'epss@gmail.com',
-    initials: 'EP',
-    color: '#7c3aed',
-    to: 'support@ienetworks.co',
-    date: 'Apr 15, 2026 · 10:32 AM',
-    body: `Dear Support Team,
-
-We are experiencing frequent VPN session drops on our FortiGate firewall at the Addis Ababa data center. This issue started around 08:30 AM today and is intermittently affecting our remote staff who access the data center systems through the VPN tunnel.
-
-Specifically:
-- VPN sessions drop approximately every 20-30 minutes
-- Re-connection attempts sometimes take 3-5 minutes to succeed
-- Affects all users connecting via SSL-VPN on port 10443
-- The IPSec tunnels to branch offices appear to be stable
-
-We have attached the FortiGate system logs from the last 6 hours for your reference.
-
-Please prioritize this issue as it is impacting business operations.
-
-Best regards,
-EPSS Client`,
-    attachments: [
-      { name: 'fortigate-logs-20260415.txt', size: '245 KB' },
-    ],
-  },
-  {
-    id: 2,
-    from: 'Wongel Wondyifraw',
-    fromEmail: 'wongel@ienetworks.co',
-    initials: 'WW',
-    color: '#1d4ed8',
-    to: 'epss@gmail.com',
-    date: 'Apr 15, 2026 · 11:15 AM',
-    body: `Hello,
-
-Thank you for reporting this. I have reviewed the attached logs and can see the SSL-VPN sessions are being terminated with error code 7013 — this typically indicates a session timeout configuration issue.
-
-I have identified the root cause: the SSL-VPN session idle timeout is set to 28 minutes, which is causing the drops. I am adjusting the configuration on the FortiGate now.
-
-Please allow 10-15 minutes for the changes to propagate. I will send a confirmation once the fix is applied. In the meantime, affected users can reconnect manually.
-
-We will also review the overall VPN policy to ensure this doesn't recur.
-
-Regards,
-Wongel Wondyifraw
-Field Engineer — IE Networks`,
-    attachments: [],
-  },
-  {
-    id: 3,
-    from: 'EPSS Client',
-    fromEmail: 'epss@gmail.com',
-    initials: 'EP',
-    color: '#7c3aed',
-    to: 'wongel@ienetworks.co',
-    date: 'Apr 15, 2026 · 11:52 AM',
-    body: `Hi Wongel,
-
-Thank you for the quick response. We can confirm that the VPN sessions are now stable and users are able to maintain their connections. No drops observed in the last 30 minutes.
-
-Could you please also check if the VPN split tunneling configuration is optimal? We have been noticing slower speeds when accessing local resources through VPN.
-
-Thank you for the prompt resolution.`,
-    attachments: [],
-  },
-];
+const avatarColors = ['#7c3aed', '#1d4ed8', '#0891b2', '#059669', '#d97706', '#dc2626'];
 
 const statusOptions = ['Open', 'Pending', 'Closed'];
 const priorityOptions = ['Critical', 'High', 'Medium', 'Low'];
 
 export function EmailSupportDetail() {
   const navigate = useNavigate();
+  const params = useParams();
+  const emailId = params.id ?? '';
+  const { emailThreads, convertEmailToTicket } = useServiceDesk();
+  const thread = emailThreads.find((t) => t.id === emailId);
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [status, setStatus] = useState('Open');
   const [priority, setPriority] = useState('Critical');
   const [starred, setStarred] = useState(false);
-  const [collapsedEmails, setCollapsedEmails] = useState<Record<number, boolean>>({});
+  const [collapsedEmails, setCollapsedEmails] = useState<Record<string, boolean>>({});
 
-  const toggleCollapse = (id: number) => {
+  const toggleCollapse = (id: string) => {
     setCollapsedEmails(prev => ({ ...prev, [id]: !prev[id] }));
   };
+
+  React.useEffect(() => {
+    if (!thread) return;
+    setStatus(thread.status);
+    setPriority(thread.priority);
+    setStarred(thread.starred);
+  }, [thread]);
 
   const statusColors: Record<string, { badgeClass: string; dotClass: string }> = {
     Open: { badgeClass: 'bg-blue-50 text-blue-700 border-blue-200', dotClass: 'bg-blue-500' },
@@ -128,9 +71,17 @@ export function EmailSupportDetail() {
   };
 
   const sc = statusColors[status];
+  const messages = thread?.messages ?? [];
+  const subject = messages[0]?.subject ?? 'Email thread';
 
   return (
     <div className="flex h-full flex-col bg-muted/30">
+      {!thread ? (
+        <div className="flex flex-1 items-center justify-center p-6">
+          <div className="text-[13px] text-muted-foreground">Email thread not found.</div>
+        </div>
+      ) : (
+      <>
       {/* Top Action Bar */}
       <div className="flex h-[48px] shrink-0 items-center gap-1 border-b bg-background px-6">
         <Button
@@ -144,7 +95,7 @@ export function EmailSupportDetail() {
         </Button>
         <Separator orientation="vertical" className="mx-1 h-4" />
         <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-        <span className="px-1 text-[12px] text-muted-foreground">EM-001</span>
+        <span className="px-1 text-[12px] text-muted-foreground">{thread.id}</span>
         <Separator orientation="vertical" className="mx-1 h-4" />
 
         <Badge variant="outline" className={`gap-1.5 text-[11px] ${sc.badgeClass}`}>
@@ -161,7 +112,15 @@ export function EmailSupportDetail() {
           >
             {starred ? <Star className="w-4 h-4 text-amber-400 fill-amber-400" /> : <StarOff className="w-4 h-4" />}
           </Button>
-          <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2.5 text-[12px]">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1.5 px-2.5 text-[12px]"
+            onClick={() => {
+              const ticketId = convertEmailToTicket({ emailId: thread.id, project: "EPSS", supportType: "Technical Support" });
+              navigate(`/tickets/${ticketId}`);
+            }}
+          >
             <Ticket className="w-3.5 h-3.5" />
             Convert to Ticket
           </Button>
@@ -188,23 +147,23 @@ export function EmailSupportDetail() {
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <h1 className="text-[16px] leading-snug font-semibold">
-                  Urgent: FortiGate firewall dropping VPN sessions intermittently
+                  {subject}
                 </h1>
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-[12px] text-muted-foreground">
-                  <span className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">EM-001</span>
+                  <span className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">{thread.id}</span>
                   <div className="flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5" />
-                    Opened Apr 15, 2026
+                    Opened {new Date(thread.createdAt).toLocaleDateString()}
                   </div>
                   <div className="flex items-center gap-1">
                     <Mail className="w-3.5 h-3.5" />
-                    {emailThread.length} messages
+                    {messages.length} messages
                   </div>
                   <Badge variant="outline" className="text-[11px] bg-red-50 text-red-700 border-red-200">
-                    Critical
+                    {priority}
                   </Badge>
                   <Badge variant="outline" className="text-[11px]">
-                    Network
+                    {thread.tag ?? "—"}
                   </Badge>
                 </div>
               </div>
@@ -218,9 +177,9 @@ export function EmailSupportDetail() {
           </Card>
 
           {/* Email Thread */}
-          {emailThread.map((email, i) => {
+          {messages.map((email, i) => {
             const isCollapsed = collapsedEmails[email.id];
-            const isLast = i === emailThread.length - 1;
+            const isLast = i === messages.length - 1;
             return (
               <Card key={email.id} className="overflow-hidden p-0">
                 {/* Email Header */}
@@ -231,15 +190,15 @@ export function EmailSupportDetail() {
                   <Avatar className="size-8">
                     <AvatarFallback
                       className="text-[11px] font-semibold text-white"
-                      style={{ backgroundColor: email.color }}
+                      style={{ backgroundColor: avatarColors[i % avatarColors.length] }}
                     >
-                      {email.initials}
+                      {email.from.initials}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-[13px] font-semibold">{email.from}</span>
-                      <span className="text-[12px] text-muted-foreground">&lt;{email.fromEmail}&gt;</span>
+                      <span className="text-[13px] font-semibold">{email.from.name}</span>
+                      <span className="text-[12px] text-muted-foreground">&lt;{email.from.email}&gt;</span>
                     </div>
                     {isCollapsed && (
                       <div className="mt-0.5 truncate text-[12px] text-muted-foreground">
@@ -247,11 +206,11 @@ export function EmailSupportDetail() {
                       </div>
                     )}
                     {!isCollapsed && (
-                      <div className="text-[12px] text-muted-foreground">to {email.to}</div>
+                      <div className="text-[12px] text-muted-foreground">to {email.to.map((t) => t.email).join(", ")}</div>
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[11px] text-muted-foreground">{email.date}</span>
+                    <span className="text-[11px] text-muted-foreground">{new Date(email.createdAt).toLocaleString()}</span>
                     {email.attachments.length > 0 && (
                       <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
                     )}
@@ -267,10 +226,10 @@ export function EmailSupportDetail() {
                         </Button>
                         <div onClick={(e) => e.stopPropagation()}>
                           <RowActionsMenu
-                            entityName={`message-${msg.id}`}
-                            onView={() => toast.info(`Viewing message ${msg.id}`)}
-                            onEdit={() => toast.info(`Edit reply template for message ${msg.id} coming soon`)}
-                            onDelete={() => toast.success(`Message ${msg.id} deleted`)}
+                            entityName={`message-${email.id}`}
+                            onView={() => toast.info(`Viewing message ${email.id}`)}
+                            onEdit={() => toast.info(`Edit reply template for message ${email.id} coming soon`)}
+                            onDelete={() => toast.success(`Message ${email.id} deleted`)}
                           />
                         </div>
                       </div>
@@ -295,7 +254,7 @@ export function EmailSupportDetail() {
                                 <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
                                 <div>
                                   <div className="text-[12px] font-medium">{att.name}</div>
-                                  <div className="text-[11px] text-muted-foreground">{att.size}</div>
+                                  <div className="text-[11px] text-muted-foreground">{Math.round(att.sizeBytes / 1024)} KB</div>
                                 </div>
                               </div>
                             ))}
@@ -502,6 +461,8 @@ export function EmailSupportDetail() {
           </Card>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

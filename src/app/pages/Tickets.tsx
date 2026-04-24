@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Search, Plus,
@@ -35,24 +35,13 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { RowActionsMenu } from '../components/RowActionsMenu';
-
-const allTickets = [
-  { id: '00135', subject: 'FortiGate, Cisco Switch and server access through WiFi', company: 'EPSS', type: 'Internal', status: 'Open', priority: null, assigned: ['SS', 'WW'], created: '2026-02-06', age: '41d', initials: 'EP', color: '#7c3aed' },
-  { id: '00134', subject: 'MoWS site UPS failure and power distribution issue', company: 'MoWS', type: 'Internal', status: 'Escalated', priority: 'High', assigned: ['WW'], created: '2026-02-06', age: '41d', initials: 'MW', color: '#dc2626' },
-  { id: '00133', subject: 'OPO site Power issue and wall paint restoration', company: 'OPO', type: 'Internal', status: 'Pending', priority: 'Low', assigned: [], created: '2026-02-06', age: '41d', initials: 'OP', color: '#059669' },
-  { id: '00132', subject: 'MoCS site Cabinet installation and cabling work', company: 'MoCS', type: 'Internal', status: 'Open', priority: null, assigned: [], created: '2026-02-06', age: '41d', initials: 'MC', color: '#0891b2' },
-  { id: '00131', subject: 'MOTI Virtual machine access and permission issues', company: 'MoTI', type: 'Internal', status: 'Open', priority: null, assigned: [], created: '2026-02-05', age: '41d', initials: 'MT', color: '#6366f1' },
-  { id: '00130', subject: 'MOTI main datacenter power outage incident', company: 'MoTI', type: 'Internal', status: 'Open', priority: null, assigned: [], created: '2026-02-05', age: '42d', initials: 'MT', color: '#6366f1' },
-  { id: '00129', subject: 'ICT Preventive maintenance schedule Q1 2026', company: 'ICT', type: 'Internal', status: 'Open', priority: null, assigned: [], created: '2026-02-05', age: '42d', initials: 'IC', color: '#d97706' },
-  { id: '00128', subject: 'ICT Printer malfunction — HP LaserJet Pro', company: 'ICT', type: 'Internal', status: 'Open', priority: null, assigned: [], created: '2026-02-05', age: '42d', initials: 'IC', color: '#d97706' },
-  { id: '00127', subject: 'ICT Power meter installation for server room', company: 'ICT', type: 'Internal', status: 'Open', priority: null, assigned: [], created: '2026-02-05', age: '42d', initials: 'IC', color: '#d97706' },
-  { id: '00126', subject: 'EPSS Data Domain backup restore procedure', company: 'EPSS', type: 'Internal', status: 'Closed', priority: null, assigned: ['MM'], created: '2026-02-04', age: '43d', initials: 'EP', color: '#7c3aed' },
-];
+import { useServiceDesk } from '../store/serviceDeskStore';
 
 const statusConfig: Record<string, { dotClass: string; badgeClass: string }> = {
   Open: { dotClass: 'bg-blue-500', badgeClass: 'bg-blue-50 text-blue-700 border-blue-200' },
+  "In Progress": { dotClass: 'bg-amber-500', badgeClass: 'bg-amber-50 text-amber-700 border-amber-200' },
   Escalated: { dotClass: 'bg-red-500', badgeClass: 'bg-red-50 text-red-700 border-red-200' },
-  Pending: { dotClass: 'bg-amber-500', badgeClass: 'bg-amber-50 text-amber-700 border-amber-200' },
+  Resolved: { dotClass: 'bg-emerald-500', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   Closed: { dotClass: 'bg-muted-foreground', badgeClass: 'bg-muted text-muted-foreground border-border' },
 };
 
@@ -67,31 +56,54 @@ const avatarColors = ['#7c3aed', '#1d4ed8', '#0891b2', '#059669', '#d97706', '#d
 
 export function Tickets() {
   const navigate = useNavigate();
+  const { tickets, engineers } = useServiceDesk();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [projectFilter, setProjectFilter] = useState('all');
+  const [engineerFilter, setEngineerFilter] = useState('all');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
 
-  const filtered = allTickets.filter((t) => {
-    if (search && !t.subject.toLowerCase().includes(search.toLowerCase()) && !t.id.includes(search)) return false;
-    if (statusFilter !== 'all' && t.status.toLowerCase() !== statusFilter) return false;
-    if (priorityFilter !== 'all') {
-      if (priorityFilter === 'none' && t.priority !== null) return false;
-      if (priorityFilter !== 'none' && t.priority?.toLowerCase() !== priorityFilter) return false;
-    }
-    return true;
-  });
+  const projects = useMemo(() => Array.from(new Set(tickets.map((t) => t.project))).sort(), [tickets]);
+
+  const filtered = useMemo(() => {
+    return tickets.filter((t) => {
+      if (
+        search &&
+        !t.subject.toLowerCase().includes(search.toLowerCase()) &&
+        !t.id.includes(search) &&
+        !t.project.toLowerCase().includes(search.toLowerCase())
+      )
+        return false;
+      if (statusFilter !== 'all' && t.status.toLowerCase() !== statusFilter) return false;
+      if (priorityFilter !== 'all') {
+        if (priorityFilter === 'none' && t.priority !== null) return false;
+        if (priorityFilter !== 'none' && t.priority?.toLowerCase() !== priorityFilter) return false;
+      }
+      if (projectFilter !== 'all' && t.project !== projectFilter) return false;
+      if (engineerFilter !== 'all' && (t.assignedEngineerId ?? 'unassigned') !== engineerFilter) return false;
+      if (fromDate && t.createdAt.slice(0, 10) < fromDate) return false;
+      if (toDate && t.createdAt.slice(0, 10) > toDate) return false;
+      return true;
+    });
+  }, [engineerFilter, fromDate, priorityFilter, projectFilter, search, statusFilter, tickets, toDate]);
+
+  React.useEffect(() => {
+    setSelected((prev) => prev.filter((id) => filtered.some((t) => t.id === id)));
+  }, [filtered]);
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   };
 
   const stats = [
-    { label: 'Total', value: allTickets.length, color: '#0b2235' },
-    { label: 'Open', value: allTickets.filter(t => t.status === 'Open').length, color: '#2563eb' },
-    { label: 'Escalated', value: allTickets.filter(t => t.status === 'Escalated').length, color: '#dc2626' },
-    { label: 'Pending', value: allTickets.filter(t => t.status === 'Pending').length, color: '#d97706' },
-    { label: 'Closed', value: allTickets.filter(t => t.status === 'Closed').length, color: '#6c757d' },
+    { label: 'Total', value: tickets.length, color: '#0b2235' },
+    { label: 'Open', value: tickets.filter(t => t.status === 'Open').length, color: '#2563eb' },
+    { label: 'Escalated', value: tickets.filter(t => t.status === 'Escalated').length, color: '#dc2626' },
+    { label: 'In Progress', value: tickets.filter(t => t.status === 'In Progress').length, color: '#d97706' },
+    { label: 'Closed', value: tickets.filter(t => t.status === 'Closed').length, color: '#6c757d' },
   ];
 
   return (
@@ -157,16 +169,37 @@ export function Tickets() {
           </SelectContent>
         </Select>
 
-        <Select defaultValue="all">
+        <Select value={projectFilter} onValueChange={setProjectFilter}>
           <SelectTrigger className="h-8 w-[140px] text-[13px]">
-            <SelectValue placeholder="All Types" />
+            <SelectValue placeholder="All Projects" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="internal">Internal</SelectItem>
-            <SelectItem value="external">External</SelectItem>
+            <SelectItem value="all">All Projects</SelectItem>
+            {projects.map((p) => (
+              <SelectItem key={p} value={p}>
+                {p}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
+
+        <Select value={engineerFilter} onValueChange={setEngineerFilter}>
+          <SelectTrigger className="h-8 w-[170px] text-[13px]">
+            <SelectValue placeholder="All Engineers" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Engineers</SelectItem>
+            <SelectItem value="unassigned">Unassigned</SelectItem>
+            {engineers.map((e) => (
+              <SelectItem key={e.id} value={e.id}>
+                {e.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-8 w-[140px] text-[13px]" />
+        <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-8 w-[140px] text-[13px]" />
 
         {selected.length > 0 && (
           <div className="ml-auto flex items-center gap-2">
@@ -210,6 +243,7 @@ export function Tickets() {
               const sc = statusConfig[ticket.status];
               const pc = ticket.priority ? priorityConfig[ticket.priority] : null;
               const isSelected = selected.includes(ticket.id);
+              const eng = ticket.assignedEngineerId ? engineers.find((e) => e.id === ticket.assignedEngineerId) : null;
               return (
                 <TableRow
                   key={ticket.id}
@@ -225,14 +259,14 @@ export function Tickets() {
                       <Avatar className="size-8 rounded-md">
                         <AvatarFallback
                           className="rounded-md text-[11px] font-semibold text-white"
-                          style={{ backgroundColor: ticket.color }}
+                          style={{ backgroundColor: avatarColors[i % avatarColors.length] }}
                         >
-                          {ticket.initials}
+                          {ticket.project.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
                         <div className="max-w-md truncate text-[13px] font-medium">{ticket.subject}</div>
-                        <div className="mt-0.5 text-[11px] text-muted-foreground">#{ticket.id} · {ticket.company} · {ticket.type}</div>
+                        <div className="mt-0.5 text-[11px] text-muted-foreground">#{ticket.id} · {ticket.project} · {ticket.supportType}</div>
                       </div>
                     </div>
                   </TableCell>
@@ -253,29 +287,25 @@ export function Tickets() {
                     )}
                   </TableCell>
                   <TableCell className="px-4 py-3.5">
-                    {ticket.assigned.length > 0 ? (
-                      <div className="flex -space-x-1.5">
-                        {ticket.assigned.map((init, idx) => (
-                          <Avatar
-                            key={idx}
-                            className="size-6 border-2 border-background"
+                    {eng ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="size-6">
+                          <AvatarFallback
+                            className="text-[10px] font-semibold text-white"
+                            style={{ backgroundColor: avatarColors[(i + 1) % avatarColors.length] }}
                           >
-                            <AvatarFallback
-                              className="text-[10px] font-semibold text-white"
-                              style={{ backgroundColor: avatarColors[idx % avatarColors.length] }}
-                            >
-                              {init}
-                            </AvatarFallback>
-                          </Avatar>
-                        ))}
+                            {eng.initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-[12px] text-muted-foreground truncate max-w-[140px]">{eng.name}</span>
                       </div>
                     ) : (
                       <span className="text-[12px] text-muted-foreground">Unassigned</span>
                     )}
                   </TableCell>
                   <TableCell className="px-4 py-3.5">
-                    <div className="text-[12px] text-muted-foreground">{ticket.created}</div>
-                    <div className="text-[11px] text-muted-foreground">{ticket.age} ago</div>
+                    <div className="text-[12px] text-muted-foreground">{ticket.createdAt.slice(0, 10)}</div>
+                    <div className="text-[11px] text-muted-foreground">{ticket.updatedAt.slice(0, 10)}</div>
                   </TableCell>
                   <TableCell className="pr-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                     <RowActionsMenu
@@ -308,7 +338,7 @@ export function Tickets() {
 
       {/* Footer */}
       <div className="flex shrink-0 items-center justify-between border-t bg-background px-6 py-3">
-        <span className="text-[12px] text-muted-foreground">Showing {filtered.length} of {allTickets.length} tickets</span>
+        <span className="text-[12px] text-muted-foreground">Showing {filtered.length} of {tickets.length} tickets</span>
         <Pagination className="mx-0 w-auto justify-end">
           <PaginationContent>
             <PaginationItem>

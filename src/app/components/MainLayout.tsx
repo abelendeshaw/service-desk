@@ -39,6 +39,7 @@ import {
 } from './ui/dropdown-menu';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { useServiceDesk } from '../store/serviceDeskStore';
 
 const navGroups = [
   {
@@ -70,6 +71,8 @@ export function MainLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const navigate = useNavigate();
+  const { notifications, markNotificationsRead } = useServiceDesk();
+  const unreadCount = notifications.filter((n) => n.unread).length;
 
   const confirmLogout = () => {
     setLogoutOpen(false);
@@ -260,21 +263,32 @@ export function MainLayout() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative size-8">
                   <Bell className="w-4 h-4" />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-background" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-background" />
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-72">
-                <DropdownMenuItem className="flex-col items-start gap-0.5">
-                  <span className="font-medium">Ticket SUP-204 breached SLA</span>
-                  <span className="text-xs text-muted-foreground">2 minutes ago</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="flex-col items-start gap-0.5">
-                  <span className="font-medium">New message from EPSS client</span>
-                  <span className="text-xs text-muted-foreground">10 minutes ago</span>
-                </DropdownMenuItem>
+                {notifications.slice(0, 6).map((n) => (
+                  <DropdownMenuItem
+                    key={n.id}
+                    className="flex-col items-start gap-0.5"
+                    onSelect={() => {
+                      if (n.href) navigate(n.href);
+                    }}
+                  >
+                    <span className="font-medium">{n.title}</span>
+                    <span className="text-xs text-muted-foreground">{n.detail ?? new Date(n.createdAt).toLocaleString()}</span>
+                  </DropdownMenuItem>
+                ))}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => navigate('/support')}>
-                  View all notifications
+                <DropdownMenuItem
+                  onSelect={() => {
+                    markNotificationsRead();
+                    toast.success("Notifications marked as read");
+                  }}
+                >
+                  Mark all as read
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

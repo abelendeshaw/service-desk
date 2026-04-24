@@ -37,6 +37,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Separator } from "../components/ui/separator";
 import { Switch } from "../components/ui/switch";
+import { useServiceDesk } from "../store/serviceDeskStore";
 
 type Section =
   | "profile"
@@ -68,6 +69,7 @@ const notifItems = [
 
 export function Settings() {
   const { theme, setTheme } = useTheme();
+  const { resetToSeed } = useServiceDesk();
   const [activeSection, setActiveSection] = useState<Section>("profile");
   const [showPassword, setShowPassword] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -113,6 +115,24 @@ export function Settings() {
         </Card>
 
         <div className="flex-1">
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-[14px]">Demo Data</CardTitle>
+              <CardDescription>Reload seeded projects/tickets/articles (clears saved local data).</CardDescription>
+            </CardHeader>
+            <CardContent className="flex items-center justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  resetToSeed();
+                  window.location.reload();
+                }}
+              >
+                Reset demo data
+              </Button>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="flex-row items-center justify-between gap-4">
               <div className="space-y-1">

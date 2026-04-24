@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router';
-import { Search, Plus, BookOpen, Folder, Eye, MessageSquare, Grid3X3, List, Tag, FileText, TrendingUp } from 'lucide-react';
-import { toast } from 'sonner';
+import React, { useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router';
+import { Search, BookOpen, Folder, Grid3X3, List, FileText } from 'lucide-react';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -9,50 +8,42 @@ import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { RowActionsMenu } from '../components/RowActionsMenu';
+import { useServiceDesk } from '../store/serviceDeskStore';
 
-const categories = [
-  { name: 'Network', count: 5, color: '#2563eb' },
-  { name: 'Power & UPS', count: 3, color: '#d97706' },
-  { name: 'Servers', count: 4, color: '#0891b2' },
-  { name: 'Security', count: 2, color: '#dc2626' },
-  { name: 'General', count: 1, color: '#059669' },
-];
-
-const articles = [
-  { id: 1, title: 'EPSS Backup Clone issue — Dell EMC Data Domain', category: 'Servers', views: 12, comments: 2, author: 'Sisay Shiferaw', initials: 'SS', color: '#7c3aed', date: '2025-10-06', status: 'Published' },
-  { id: 2, title: 'ERA DC AC power conditioning and failover', category: 'Power & UPS', views: 7, comments: 0, author: 'Wongel Wondyifraw', initials: 'WW', color: '#1d4ed8', date: '2025-11-05', status: 'Published' },
-  { id: 3, title: 'MOF dual AP high availability sync configuration', category: 'Network', views: 9, comments: 1, author: 'Masresha Melese', initials: 'MM', color: '#0891b2', date: '2025-11-09', status: 'Published' },
-  { id: 4, title: 'ERA/MOTL FortiNAC configuration and NAC policy', category: 'Security', views: 4, comments: 0, author: 'Abraham Tayu', initials: 'AT', color: '#7c3aed', date: '2025-10-05', status: 'Draft' },
-  { id: 5, title: 'EPSS Data Domain — lost volume recovery procedure', category: 'Servers', views: 15, comments: 3, author: 'Sisay Shiferaw', initials: 'SS', color: '#7c3aed', date: '2025-10-06', status: 'Published' },
-  { id: 6, title: 'MinT SR MOUI site Power and UPS replacement guide', category: 'Power & UPS', views: 3, comments: 0, author: 'Mebrate Degu', initials: 'MD', color: '#059669', date: '2025-10-06', status: 'Published' },
-  { id: 7, title: 'ESLSE Active Directory and DNS Server configuration', category: 'Servers', views: 8, comments: 1, author: 'Wongel Wondyifraw', initials: 'WW', color: '#1d4ed8', date: '2025-10-05', status: 'Published' },
-  { id: 8, title: 'ESLSE UAG SSL Certificate Renewal walkthrough', category: 'Security', views: 6, comments: 0, author: 'Abraham Tayu', initials: 'AT', color: '#7c3aed', date: '2025-11-05', status: 'Published' },
-  { id: 9, title: 'MinT SR Hawasa site TAP IP address configuration', category: 'Network', views: 2, comments: 0, author: 'Masresha Melese', initials: 'MM', color: '#0891b2', date: '2025-10-06', status: 'Published' },
-  { id: 10, title: 'MINT ECA DC WoredaNet network configuration guide', category: 'Network', views: 5, comments: 0, author: 'Masresha Melese', initials: 'MM', color: '#0891b2', date: '2025-10-06', status: 'Published' },
-  { id: 11, title: 'MOTI wall mount AC unit replacement procedure', category: 'Power & UPS', views: 1, comments: 0, author: 'Wongel Wondyifraw', initials: 'WW', color: '#1d4ed8', date: '2025-10-06', status: 'Draft' },
-  { id: 12, title: 'MOTI core network connectivity and routing issue', category: 'Network', views: 4, comments: 0, author: 'Sisay Shiferaw', initials: 'SS', color: '#7c3aed', date: '2025-10-06', status: 'Published' },
-];
+const avatarColors = ['#7c3aed', '#1d4ed8', '#0891b2', '#059669', '#d97706', '#dc2626'];
 
 export function KnowledgeBase() {
+  const { project } = useParams<{ project?: string }>();
   const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const navigate = useNavigate();
+  const { tickets, ticketArticles, getOrCreateTicketArticle } = useServiceDesk();
 
-  const filtered = articles.filter(a => {
-    if (search && !a.title.toLowerCase().includes(search.toLowerCase())) return false;
-    if (categoryFilter !== 'all' && a.category !== categoryFilter) return false;
-    if (statusFilter !== 'all' && a.status !== statusFilter) return false;
-    return true;
-  });
+  const projects = useMemo(
+    () => Array.from(new Set(tickets.map((t) => t.project))).sort(),
+    [tickets],
+  );
+
+  const activeProject = project ?? null;
+
+  const projectTickets = useMemo(() => {
+    const pool = activeProject ? tickets.filter((t) => t.project === activeProject) : tickets;
+    return pool.filter((t) => {
+      if (!search) return true;
+      return (
+        t.subject.toLowerCase().includes(search.toLowerCase()) ||
+        t.id.includes(search) ||
+        t.supportType.toLowerCase().includes(search.toLowerCase()) ||
+        t.project.toLowerCase().includes(search.toLowerCase())
+      );
+    });
+  }, [activeProject, search, tickets]);
 
   const stats = [
-    { label: 'Total Articles', value: articles.length, icon: FileText, color: '#0b2235' },
-    { label: 'Published', value: articles.filter(a => a.status === 'Published').length, icon: BookOpen, color: '#059669' },
-    { label: 'Total Views', value: articles.reduce((a, b) => a + b.views, 0), icon: Eye, color: '#2563eb' },
-    { label: 'Categories', value: categories.length, icon: Tag, color: '#d97706' },
+    { label: 'Projects', value: projects.length, icon: Folder, color: '#0b2235' },
+    { label: 'Tickets', value: activeProject ? projectTickets.length : tickets.length, icon: FileText, color: '#2563eb' },
+    { label: 'Articles', value: Object.keys(ticketArticles).length, icon: BookOpen, color: '#059669' },
+    { label: 'View', value: activeProject ? activeProject : 'All', icon: Grid3X3, color: '#d97706' },
   ];
 
   return (
@@ -62,20 +53,12 @@ export function KnowledgeBase() {
         <div className="flex items-center justify-between mb-5">
           <div>
             <h1 className="text-[20px] font-semibold tracking-tight">Knowledge Base</h1>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">Technical documentation and resolution guides</p>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">Projects → Tickets → Articles</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="gap-1.5 text-[13px]">
               <Folder className="w-3.5 h-3.5" />
-              Categories
-            </Button>
-            <Button
-              onClick={() => navigate('/knowledge/new')}
-              size="sm"
-              className="gap-1.5 text-[13px]"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              New Article
+              Projects
             </Button>
           </div>
         </div>
@@ -102,29 +85,23 @@ export function KnowledgeBase() {
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search articles..."
+              placeholder={activeProject ? "Search tickets in project..." : "Search all ticket articles..."}
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="h-8 bg-muted pl-9 pr-3 text-[13px]"
             />
           </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="h-8 w-[170px] text-[13px]">
-              <SelectValue placeholder="All Categories" />
+          <Select value={activeProject ?? "all"} onValueChange={(v) => navigate(v === "all" ? "/knowledge" : `/knowledge/project/${v}`)}>
+            <SelectTrigger className="h-8 w-[180px] text-[13px]">
+              <SelectValue placeholder="All Projects" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map(c => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-8 w-[140px] text-[13px]">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="Published">Published</SelectItem>
-              <SelectItem value="Draft">Draft</SelectItem>
+              <SelectItem value="all">All Projects</SelectItem>
+              {projects.map((p) => (
+                <SelectItem key={p} value={p}>
+                  {p}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -151,80 +128,84 @@ export function KnowledgeBase() {
 
       <div className="flex-1 overflow-auto p-6">
         <div className="flex gap-5">
-          {/* Categories Sidebar */}
-          <div className="w-48 flex-shrink-0 space-y-2">
-            <div className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Categories</div>
+          {/* Projects Sidebar */}
+          <div className="w-52 flex-shrink-0 space-y-2">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Projects</div>
             <Button
-              onClick={() => setCategoryFilter('all')}
-              variant={categoryFilter === 'all' ? 'default' : 'ghost'}
+              onClick={() => navigate("/knowledge")}
+              variant={!activeProject ? 'default' : 'ghost'}
               className="h-auto w-full justify-between px-3 py-2 text-[13px]"
             >
-              <span>All Articles</span>
-              <span className="text-[11px] font-semibold">{articles.length}</span>
+              <span>All Projects</span>
+              <span className="text-[11px] font-semibold">{projects.length}</span>
             </Button>
-            {categories.map(cat => (
-              <Button
-                key={cat.name}
-                onClick={() => setCategoryFilter(cat.name)}
-                variant={categoryFilter === cat.name ? 'default' : 'ghost'}
-                className="h-auto w-full justify-between px-3 py-2 text-[13px]"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: categoryFilter === cat.name ? 'white' : cat.color }} />
-                  <span>{cat.name}</span>
-                </div>
-                <span className="text-[11px] font-semibold">{cat.count}</span>
-              </Button>
-            ))}
+            {projects.map((p, idx) => {
+              const count = tickets.filter((t) => t.project === p).length;
+              return (
+                <Button
+                  key={p}
+                  onClick={() => navigate(`/knowledge/project/${p}`)}
+                  variant={activeProject === p ? 'default' : 'ghost'}
+                  className="h-auto w-full justify-between px-3 py-2 text-[13px]"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: activeProject === p ? 'white' : avatarColors[idx % avatarColors.length] }} />
+                    <span>{p}</span>
+                  </div>
+                  <span className="text-[11px] font-semibold">{count}</span>
+                </Button>
+              );
+            })}
           </div>
 
-          {/* Articles */}
+          {/* Tickets */}
           <div className="flex-1 min-w-0">
             {viewMode === 'list' ? (
               <Card className="overflow-hidden p-0">
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Ticket</TableHead>
+                      <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Support</TableHead>
+                      <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Project</TableHead>
                       <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Article</TableHead>
-                      <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Category</TableHead>
-                      <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Stats</TableHead>
-                      <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Status</TableHead>
-                      <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Date</TableHead>
-                      <TableHead className="w-10 pr-4" />
+                      <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Updated</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filtered.map((article) => {
-                      const cat = categories.find(c => c.name === article.category);
+                    {projectTickets.map((t, idx) => {
+                      const article = ticketArticles[t.id] ?? getOrCreateTicketArticle({ ticketId: t.id });
                       return (
-                        <TableRow key={article.id} className="group cursor-pointer" onClick={() => navigate(`/knowledge/${article.id}`)}>
+                        <TableRow
+                          key={t.id}
+                          className="group cursor-pointer"
+                          onClick={() => navigate(`/knowledge/ticket/${t.id}`)}
+                        >
                           <TableCell className="px-5 py-3.5">
                             <div className="flex items-center gap-3">
                               <Avatar className="size-7 rounded-md">
-                                <AvatarFallback className="rounded-md text-[10px] font-semibold text-white" style={{ backgroundColor: article.color }}>
-                                  {article.initials}
+                                <AvatarFallback
+                                  className="rounded-md text-[10px] font-semibold text-white"
+                                  style={{ backgroundColor: avatarColors[idx % avatarColors.length] }}
+                                >
+                                  {t.project.slice(0, 2).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
-                              <div>
-                                <div className="line-clamp-1 text-[13px] font-medium">{article.title}</div>
-                                <div className="mt-0.5 text-[11px] text-muted-foreground">by {article.author}</div>
+                              <div className="min-w-0">
+                                <div className="line-clamp-1 text-[13px] font-medium">{t.subject}</div>
+                                <div className="mt-0.5 text-[11px] text-muted-foreground">#{t.id}</div>
                               </div>
                             </div>
                           </TableCell>
                           <TableCell className="px-5 py-3.5">
                             <Badge variant="outline" className="text-[11px]">
-                              {article.category}
+                              {t.supportType}
                             </Badge>
                           </TableCell>
                           <TableCell className="px-5 py-3.5">
-                            <div className="flex items-center gap-3 text-[12px] text-muted-foreground">
-                              <div className="flex items-center gap-1">
-                                <Eye className="w-3.5 h-3.5" /> {article.views}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <MessageSquare className="w-3.5 h-3.5" /> {article.comments}
-                              </div>
-                            </div>
+                            <Badge variant="secondary" className="text-[11px]">
+                              {t.project}
+                            </Badge>
                           </TableCell>
                           <TableCell className="px-5 py-3.5">
                             <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${article.status === 'Published' ? 'text-emerald-600' : 'text-muted-foreground'}`}>
@@ -232,14 +213,8 @@ export function KnowledgeBase() {
                               {article.status}
                             </span>
                           </TableCell>
-                          <TableCell className="px-5 py-3.5 text-[12px] text-muted-foreground">{article.date}</TableCell>
-                          <TableCell className="pr-4 py-3.5" onClick={(event) => event.stopPropagation()}>
-                            <RowActionsMenu
-                              entityName={article.title}
-                              onView={() => navigate(`/knowledge/${article.id}`)}
-                              onEdit={() => navigate(`/knowledge/edit/${article.id}`)}
-                              onDelete={() => toast.success(`Article "${article.title}" deleted`)}
-                            />
+                          <TableCell className="px-5 py-3.5 text-[12px] text-muted-foreground">
+                            {article.updatedAt.slice(0, 10)}
                           </TableCell>
                         </TableRow>
                       );
@@ -249,32 +224,27 @@ export function KnowledgeBase() {
               </Card>
             ) : (
               <div className="grid grid-cols-3 gap-4">
-                {filtered.map((article) => {
-                  const cat = categories.find(c => c.name === article.category);
+                {projectTickets.map((t, idx) => {
+                  const article = ticketArticles[t.id] ?? getOrCreateTicketArticle({ ticketId: t.id });
                   return (
-                    <Card key={article.id} className="group cursor-pointer p-4 transition-all hover:shadow-sm" onClick={() => navigate(`/knowledge/${article.id}`)}>
+                    <Card key={t.id} className="group cursor-pointer p-4 transition-all hover:shadow-sm" onClick={() => navigate(`/knowledge/ticket/${t.id}`)}>
                       <CardContent className="p-0">
-                      <div className="flex items-start justify-between mb-3">
-                        <Avatar className="size-8 rounded-md">
-                          <AvatarFallback className="rounded-md text-[11px] font-semibold text-white" style={{ backgroundColor: article.color }}>
-                            {article.initials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex items-center gap-1">
-                          <div className={`h-1.5 w-1.5 rounded-full ${article.status === 'Published' ? 'bg-emerald-600' : 'bg-muted-foreground'}`} />
+                        <div className="flex items-start justify-between mb-3">
+                          <Avatar className="size-8 rounded-md">
+                            <AvatarFallback className="rounded-md text-[11px] font-semibold text-white" style={{ backgroundColor: avatarColors[idx % avatarColors.length] }}>
+                              {t.project.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex items-center gap-1">
+                            <div className={`h-1.5 w-1.5 rounded-full ${article.status === 'Published' ? 'bg-emerald-600' : 'bg-muted-foreground'}`} />
+                          </div>
                         </div>
-                      </div>
-                      <h3 className="mb-2 line-clamp-2 text-[13px] leading-snug font-medium">{article.title}</h3>
-                      <div className="flex items-center justify-between mt-3">
-                        <Badge variant="outline" className="text-[10px]">
-                          {article.category}
-                        </Badge>
-                        <div className="flex items-center gap-2.5 text-[11px] text-muted-foreground">
-                          <div className="flex items-center gap-0.5"><Eye className="w-3 h-3" /> {article.views}</div>
-                          <div className="flex items-center gap-0.5"><MessageSquare className="w-3 h-3" /> {article.comments}</div>
+                        <h3 className="mb-2 line-clamp-2 text-[13px] leading-snug font-medium">{t.subject}</h3>
+                        <div className="flex items-center justify-between mt-3">
+                          <Badge variant="outline" className="text-[10px]">{t.supportType}</Badge>
+                          <span className={`text-[11px] font-medium ${article.status === 'Published' ? 'text-emerald-600' : 'text-muted-foreground'}`}>{article.status}</span>
                         </div>
-                      </div>
-                      <div className="mt-2 border-t pt-2 text-[11px] text-muted-foreground">{article.date} · {article.author}</div>
+                        <div className="mt-2 border-t pt-2 text-[11px] text-muted-foreground">{t.project} · #{t.id} · {article.updatedAt.slice(0, 10)}</div>
                       </CardContent>
                     </Card>
                   );

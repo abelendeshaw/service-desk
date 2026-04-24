@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, AlertCircle, ChevronRight, Info, Users, Building2, Tag, Calendar, AlignLeft } from 'lucide-react';
+import { useServiceDesk } from '../store/serviceDeskStore';
 
 const steps = ['Basic Info', 'Assignment', 'Review'];
 
 export function CreateTicket() {
   const navigate = useNavigate();
+  const { engineers, createTicket } = useServiceDesk();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
     client: '',
     support: '',
     team: '',
+    engineerId: '',
     subject: '',
     type: '',
     deadline: '',
@@ -74,7 +77,7 @@ export function CreateTicket() {
 
         <div className="grid grid-cols-3 gap-4">
           {/* Form */}
-          <div className="col-span-2 space-y-4">
+          <div className="col-span-2 flex flex-col gap-4">
             {step === 0 && (
               <>
                 <div className="bg-white border border-[#e1e4e8] rounded-lg p-5">
@@ -187,12 +190,13 @@ export function CreateTicket() {
                   </div>
                   <div>
                     <label className={labelClasses}>Assign Agent</label>
-                    <select className={selectClasses}>
-                      <option value="">Select agent (optional)</option>
-                      <option>Sisay Shiferaw</option>
-                      <option>Wongel Wondyifraw</option>
-                      <option>Masresha Melese</option>
-                      <option>Mebrate Degu</option>
+                    <select value={form.engineerId} onChange={e => update('engineerId', e.target.value)} className={selectClasses}>
+                      <option value="">Select engineer (optional)</option>
+                      {engineers.map((e) => (
+                        <option key={e.id} value={e.id}>
+                          {e.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -280,7 +284,26 @@ export function CreateTicket() {
             </button>
           ) : (
             <button
-              onClick={() => navigate('/tickets')}
+              onClick={() => {
+                const id = createTicket({
+                  project: form.client ? form.client.split(' ')[0] : 'Unknown',
+                  contactName: form.client || 'Client Contact',
+                  supportType: form.support || 'General Support',
+                  subject: form.subject || 'New Ticket',
+                  description: form.description || '',
+                  priority: (form.priority as any) || null,
+                  resolutionDueDate: form.deadline || null,
+                  issues: [
+                    {
+                      title: form.subject || 'Issue',
+                      description: form.description || '',
+                      attachments: [],
+                    },
+                  ],
+                  initialAssignmentEngineerId: form.engineerId || null,
+                });
+                navigate(`/tickets/${id}`);
+              }}
               className="bg-primary text-primary-foreground hover:bg-primary/90 flex h-9 items-center gap-1.5 rounded-md px-4 text-[13px] font-medium transition-colors"
             >
               Create Ticket
