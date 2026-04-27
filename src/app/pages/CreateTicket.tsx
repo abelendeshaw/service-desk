@@ -11,9 +11,11 @@ export function CreateTicket() {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
     client: '',
+    project: '',
     support: '',
     team: '',
-    engineerId: '',
+    fieldEngineerId: '',
+    assignmentAt: '',
     subject: '',
     type: '',
     deadline: '',
@@ -28,14 +30,27 @@ export function CreateTicket() {
   const labelClasses = "block text-[12px] font-medium text-[#4b5563] mb-1.5";
 
   const clients = ['EPSS Client', 'ESLSE Client', 'IE Client', 'EOTC Client', 'ERA/MOTL Client', 'MinT Client', 'MoTI Client'];
+  const clientProjects: Record<string, string[]> = {
+    'EPSS Client': ['EPSS'],
+    'ESLSE Client': ['ESLSE'],
+    'IE Client': ['IE'],
+    'EOTC Client': ['EOTC'],
+    'ERA/MOTL Client': ['ERA/MOTL'],
+    'MinT Client': ['MinT'],
+    'MoTI Client': ['MoTI'],
+  };
+  const projectOptions = form.client
+    ? (clientProjects[form.client] ?? [])
+    : Object.values(clientProjects).flat();
   const supports = ['Technical Support', 'Network Support', 'General Support', 'Maintenance Support'];
   const teams = ['END Team', 'ICT Field Team', 'CSD Team', 'NOC Team'];
   const types = ['Incident', 'Request', 'Problem', 'Maintenance', 'Change'];
   const priorities = ['Critical', 'High', 'Medium', 'Low'];
+  const selectedFieldEngineer = engineers.find((engineer) => engineer.id === form.fieldEngineerId);
 
   return (
     <div className="min-h-full bg-[#f8f9fa] p-6">
-      <div className="max-w-3xl mx-auto">
+      <div className="mx-auto w-full max-w-6xl">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <button
@@ -51,33 +66,33 @@ export function CreateTicket() {
         </div>
 
         {/* Progress Steps */}
-        <div className="flex items-center gap-2 mb-6">
+        <div className="mb-6 flex items-center gap-2">
           {steps.map((s, i) => (
             <div key={s} className="flex items-center gap-2">
               <div className="flex items-center gap-2">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold transition-all ${
-                    i < step ? 'bg-[#059669] text-white' :
-                    i === step ? 'bg-[#0b2235] text-white' :
-                    'bg-[#f1f3f5] text-[#9ca3af]'
+                  className={`flex size-6 items-center justify-center rounded-full text-[11px] font-semibold transition-all ${
+                    i <= step
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground'
                   }`}
                 >
                   {i < step ? '✓' : i + 1}
                 </div>
-                <span className={`text-[12px] font-medium ${i === step ? 'text-[#0b2235]' : i < step ? 'text-[#059669]' : 'text-[#9ca3af]'}`}>
+                <span className={`text-[12px] font-medium ${i <= step ? 'text-primary' : 'text-muted-foreground'}`}>
                   {s}
                 </span>
               </div>
               {i < steps.length - 1 && (
-                <div className={`h-px w-12 ${i < step ? 'bg-[#059669]' : 'bg-[#e1e4e8]'}`} />
+                <div className={`h-px w-12 ${i < step ? 'bg-primary/70' : 'bg-border'}`} />
               )}
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid gap-4 lg:grid-cols-4">
           {/* Form */}
-          <div className="col-span-2 flex flex-col gap-4">
+          <div className="flex flex-col gap-4 lg:col-span-3">
             {step === 0 && (
               <>
                 <div className="bg-white border border-[#e1e4e8] rounded-lg p-5">
@@ -90,9 +105,30 @@ export function CreateTicket() {
                       <label className={labelClasses}>
                         Client <span className="text-red-500 ml-0.5">*</span>
                       </label>
-                      <select value={form.client} onChange={e => update('client', e.target.value)} className={selectClasses}>
+                      <select
+                        value={form.client}
+                        onChange={e => {
+                          const selectedClient = e.target.value;
+                          update('client', selectedClient);
+                          update('project', '');
+                        }}
+                        className={selectClasses}
+                      >
                         <option value="">Select client</option>
                         {clients.map(c => <option key={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelClasses}>
+                        Project <span className="text-red-500 ml-0.5">*</span>
+                      </label>
+                      <select value={form.project} onChange={e => update('project', e.target.value)} className={selectClasses}>
+                        <option value="">{form.client ? 'Select project' : 'Select client first'}</option>
+                        {projectOptions.map((project) => (
+                          <option key={project} value={project}>
+                            {project}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -190,14 +226,23 @@ export function CreateTicket() {
                   </div>
                   <div>
                     <label className={labelClasses}>Assign Agent</label>
-                    <select value={form.engineerId} onChange={e => update('engineerId', e.target.value)} className={selectClasses}>
-                      <option value="">Select engineer (optional)</option>
+                    <select value={form.fieldEngineerId} onChange={e => update('fieldEngineerId', e.target.value)} className={selectClasses}>
+                      <option value="">Select field engineer (optional)</option>
                       {engineers.map((e) => (
                         <option key={e.id} value={e.id}>
                           {e.name}
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div>
+                    <label className={labelClasses}>Assignation Timestamp</label>
+                    <input
+                      type="datetime-local"
+                      value={form.assignmentAt}
+                      onChange={e => update('assignmentAt', e.target.value)}
+                      className={fieldClasses}
+                    />
                   </div>
                 </div>
               </div>
@@ -209,12 +254,15 @@ export function CreateTicket() {
                 <div className="space-y-3">
                   {[
                     { label: 'Client', value: form.client || '—' },
+                    { label: 'Project', value: form.project || '—' },
                     { label: 'Support Type', value: form.support || '—' },
                     { label: 'Subject', value: form.subject || '—' },
                     { label: 'Type', value: form.type || '—' },
                     { label: 'Priority', value: form.priority || 'No priority' },
                     { label: 'Deadline', value: form.deadline || '—' },
                     { label: 'Team', value: form.team || '—' },
+                    { label: 'Field Engineer', value: selectedFieldEngineer?.name || '—' },
+                    { label: 'Assignation Time', value: form.assignmentAt || '—' },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex items-start gap-4 py-2.5 border-b border-[#f8f9fa]">
                       <div className="text-[12px] text-[#9ca3af] w-28 flex-shrink-0">{label}</div>
@@ -233,7 +281,7 @@ export function CreateTicket() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-4">
+          <div className="space-y-4 lg:col-span-1">
             <div className="bg-[#eff6ff] border border-[#bfdbfe] rounded-lg p-4">
               <div className="flex items-start gap-2.5">
                 <Info className="w-4 h-4 text-[#2563eb] flex-shrink-0 mt-0.5" />
@@ -286,7 +334,7 @@ export function CreateTicket() {
             <button
               onClick={() => {
                 const id = createTicket({
-                  project: form.client ? form.client.split(' ')[0] : 'Unknown',
+                  project: form.project || 'Unknown',
                   contactName: form.client || 'Client Contact',
                   supportType: form.support || 'General Support',
                   subject: form.subject || 'New Ticket',
@@ -300,7 +348,8 @@ export function CreateTicket() {
                       attachments: [],
                     },
                   ],
-                  initialAssignmentEngineerId: form.engineerId || null,
+                  initialAssignmentEngineerId: form.fieldEngineerId || null,
+                  initialAssignmentAt: form.assignmentAt ? new Date(form.assignmentAt).toISOString() : null,
                 });
                 navigate(`/tickets/${id}`);
               }}

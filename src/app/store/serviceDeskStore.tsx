@@ -33,9 +33,11 @@ type Actions = {
     resolutionDueDate: string | null;
     issues: Array<{ title: string; description: string; attachments: Attachment[] }>;
     initialAssignmentEngineerId: string | null;
+    initialAssignmentAt: string | null;
   }): string;
   updateTicketStatus(input: { ticketId: string; status: TicketStatus; reason?: string }): void;
   assignTicket(input: { ticketId: string; engineerId: string }): void;
+  setTicketEngineers(input: { ticketId: string; engineerIds: string[] }): void;
   escalateTicket(input: { ticketId: string; target: EscalationTarget; reason: string }): void;
   addTicketComment(input: {
     ticketId: string;
@@ -95,9 +97,18 @@ function loadInitialState(): State {
     if (!raw) throw new Error("no-store");
     const parsed = JSON.parse(raw) as State;
     if (!parsed?.tickets || !parsed?.emailThreads || !parsed?.engineers) throw new Error("invalid-store");
+    const normalizedTickets = parsed.tickets.map((ticket) => ({
+      ...ticket,
+      assignedEngineerIds:
+        Array.isArray((ticket as Ticket & { assignedEngineerIds?: string[] }).assignedEngineerIds)
+          ? (ticket as Ticket & { assignedEngineerIds?: string[] }).assignedEngineerIds!
+          : ticket.assignedEngineerId
+            ? [ticket.assignedEngineerId]
+            : [],
+    }));
     return {
       engineers: parsed.engineers,
-      tickets: parsed.tickets,
+      tickets: normalizedTickets,
       emailThreads: parsed.emailThreads,
       notifications: parsed.notifications ?? [],
       ticketArticles: parsed.ticketArticles ?? {},
@@ -161,6 +172,7 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
       createTicket: (input) => {
         const id = String(Math.floor(10000 + Math.random() * 89999)).slice(-5);
         const now = new Date().toISOString();
+        const assignedAt = input.initialAssignmentEngineerId ? (input.initialAssignmentAt ?? now) : null;
         const createdBy = { name: input.contactName, initials: initials(input.contactName), role: "Client Contact" as const };
         const newTicket: Ticket = {
           id,
@@ -174,8 +186,9 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
           status: "Open",
           priority: input.priority,
           resolutionDueDate: input.resolutionDueDate,
+          assignedEngineerIds: input.initialAssignmentEngineerId ? [input.initialAssignmentEngineerId] : [],
           assignedEngineerId: input.initialAssignmentEngineerId,
-          assignedAt: input.initialAssignmentEngineerId ? now : null,
+          assignedAt,
           escalation: null,
           issues: input.issues.map((iss) => ({
             id: uid("iss"),
@@ -206,7 +219,7 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
                 {
                   id: uid("act"),
                   type: "assigned",
-                  createdAt: now,
+                  createdAt: assignedAt ?? now,
                   author: { name: "System", initials: "SY", role: "System" },
                   engineer: { id: eng.id, name: eng.name, initials: eng.initials },
                 },
@@ -286,6 +299,7 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
           const now = new Date().toISOString();
           const updated: Ticket = {
             ...t,
+            assignedEngineerIds: [eng.id],
             assignedEngineerId: eng.id,
             assignedAt: now,
             updatedAt: now,
@@ -308,6 +322,38 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
             unread: true,
             kind: "assignment",
           });
+          return { ...prev, tickets: prev.tickets.map((x) => (x.id === ticketId ? updated : x)) };
+        });
+      },
+
+      setTicketEngineers: ({ ticketId, engineerIds }) => {
+        setAndPersist((prev) => {
+          const t = prev.tickets.find((x) => x.id === ticketId);
+          if (!t) return prev;
+          const normalizedIds = Array.from(new Set(engineerIds));
+          const now = new Date().toISOString();
+          const nextAssignedAt = normalizedIds.length > 0 ? (t.assignedAt ?? now) : null;
+          const nextPrimary = normalizedIds[0] ?? null;
+          const addedIds = normalizedIds.filter((id) => !t.assignedEngineerIds.includes(id));
+          const assignmentActivities = addedIds
+            .map((id) => prev.engineers.find((e) => e.id === id))
+            .filter((eng): eng is Engineer => Boolean(eng))
+            .map((eng) => ({
+              id: uid("act"),
+              type: "assigned" as const,
+              createdAt: now,
+              author: { name: "Support Coordinator", initials: "SC", role: "Support Coordinator" as const },
+              engineer: { id: eng.id, name: eng.name, initials: eng.initials },
+            }));
+
+          const updated: Ticket = {
+            ...t,
+            assignedEngineerIds: normalizedIds,
+            assignedEngineerId: nextPrimary,
+            assignedAt: nextAssignedAt,
+            updatedAt: now,
+            activity: [...assignmentActivities, ...t.activity],
+          };
           return { ...prev, tickets: prev.tickets.map((x) => (x.id === ticketId ? updated : x)) };
         });
       },
@@ -415,6 +461,7 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
             status: "Open",
             priority: thread.priority,
             resolutionDueDate: null,
+            assignedEngineerIds: thread.assignedEngineerId ? [thread.assignedEngineerId] : [],
             assignedEngineerId: thread.assignedEngineerId,
             assignedAt: thread.assignedEngineerId ? now : null,
             escalation: null,

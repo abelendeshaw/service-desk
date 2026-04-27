@@ -83,7 +83,9 @@ export function Tickets() {
         if (priorityFilter !== 'none' && t.priority?.toLowerCase() !== priorityFilter) return false;
       }
       if (projectFilter !== 'all' && t.project !== projectFilter) return false;
-      if (engineerFilter !== 'all' && (t.assignedEngineerId ?? 'unassigned') !== engineerFilter) return false;
+      const assignedIds = t.assignedEngineerIds ?? (t.assignedEngineerId ? [t.assignedEngineerId] : []);
+      if (engineerFilter === 'unassigned' && assignedIds.length > 0) return false;
+      if (engineerFilter !== 'all' && engineerFilter !== 'unassigned' && !assignedIds.includes(engineerFilter)) return false;
       if (fromDate && t.createdAt.slice(0, 10) < fromDate) return false;
       if (toDate && t.createdAt.slice(0, 10) > toDate) return false;
       return true;
@@ -243,7 +245,10 @@ export function Tickets() {
               const sc = statusConfig[ticket.status];
               const pc = ticket.priority ? priorityConfig[ticket.priority] : null;
               const isSelected = selected.includes(ticket.id);
-              const eng = ticket.assignedEngineerId ? engineers.find((e) => e.id === ticket.assignedEngineerId) : null;
+              const assignedIds = ticket.assignedEngineerIds ?? (ticket.assignedEngineerId ? [ticket.assignedEngineerId] : []);
+              const assignedEngineers = assignedIds
+                .map((id) => engineers.find((e) => e.id === id))
+                .filter((engineer): engineer is (typeof engineers)[number] => Boolean(engineer));
               return (
                 <TableRow
                   key={ticket.id}
@@ -287,17 +292,20 @@ export function Tickets() {
                     )}
                   </TableCell>
                   <TableCell className="px-4 py-3.5">
-                    {eng ? (
+                    {assignedEngineers.length > 0 ? (
                       <div className="flex items-center gap-2">
                         <Avatar className="size-6">
                           <AvatarFallback
                             className="text-[10px] font-semibold text-white"
                             style={{ backgroundColor: avatarColors[(i + 1) % avatarColors.length] }}
                           >
-                            {eng.initials}
+                            {assignedEngineers[0].initials}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-[12px] text-muted-foreground truncate max-w-[140px]">{eng.name}</span>
+                        <span className="text-[12px] text-muted-foreground truncate max-w-[170px]">
+                          {assignedEngineers[0].name}
+                          {assignedEngineers.length > 1 ? ` +${assignedEngineers.length - 1}` : ''}
+                        </span>
                       </div>
                     ) : (
                       <span className="text-[12px] text-muted-foreground">Unassigned</span>

@@ -90,6 +90,7 @@ export type Ticket = {
   status: TicketStatus;
   priority: TicketPriority;
   resolutionDueDate: string | null;
+  assignedEngineerIds: string[];
   assignedEngineerId: string | null;
   assignedAt: string | null;
   escalation: { target: EscalationTarget; escalatedAt: string; reason: string } | null;
