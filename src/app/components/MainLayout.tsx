@@ -19,6 +19,7 @@ import {
   Plus,
   HelpCircle,
   Mail,
+  BarChart2,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -55,6 +56,7 @@ const navGroups = [
       { name: 'Support', href: '/support', icon: LifeBuoy, exact: false },
       { name: 'Email Support', href: '/email-support', icon: Mail, exact: false },
       { name: 'Knowledge Base', href: '/knowledge', icon: BookOpen, exact: false },
+      { name: 'Reports', href: '/reports', icon: BarChart2, exact: false },
     ],
   },
   {
