@@ -586,6 +586,7 @@ export function SLAManagement() {
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [supportTypeFilter, setSupportTypeFilter] = useState('all');
   const [companyFilter, setCompanyFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
   const [sortField, setSortField] = useState<'companyName' | 'endDate' | 'startDate'>('endDate');
@@ -615,6 +616,7 @@ export function SLAManagement() {
         !s.projectName.toLowerCase().includes(search.toLowerCase()) &&
         !s.id.toLowerCase().includes(search.toLowerCase())) return false;
       if (statusFilter !== 'all' && s.status !== statusFilter) return false;
+      if (supportTypeFilter !== 'all' && s.supportType !== supportTypeFilter) return false;
       if (companyFilter !== 'all' && s.companyName !== companyFilter) return false;
       if (yearFilter !== 'all' && !s.startDate.startsWith(yearFilter) && !s.endDate.startsWith(yearFilter)) return false;
       return true;
@@ -624,7 +626,7 @@ export function SLAManagement() {
       return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
     });
     return rows;
-  }, [enriched, search, statusFilter, companyFilter, yearFilter, sortField, sortDir]);
+  }, [enriched, search, statusFilter, supportTypeFilter, companyFilter, yearFilter, sortField, sortDir]);
 
   const total = enriched.length;
   const activeCount = enriched.filter((s) => s.status === 'Active').length;
@@ -641,7 +643,7 @@ export function SLAManagement() {
     else { setSortField(field); setSortDir('asc'); }
   };
 
-  const hasFilters = search || statusFilter !== 'all' || companyFilter !== 'all' || yearFilter !== 'all';
+  const hasFilters = search || statusFilter !== 'all' || supportTypeFilter !== 'all' || companyFilter !== 'all' || yearFilter !== 'all';
 
   return (
     <div className="flex h-full flex-col bg-muted/30">
@@ -912,6 +914,14 @@ export function SLAManagement() {
                       <SelectItem value="Upcoming">Upcoming</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Select value={supportTypeFilter} onValueChange={setSupportTypeFilter}>
+                    <SelectTrigger className="h-8 w-[155px] text-[13px]"><SelectValue placeholder="All Support Types" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Support Types</SelectItem>
+                      <SelectItem value="Normal Support">Normal Support</SelectItem>
+                      <SelectItem value="CSAT">CSAT</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Select value={companyFilter} onValueChange={setCompanyFilter}>
                     <SelectTrigger className="h-8 w-[160px] text-[13px]"><SelectValue placeholder="All Companies" /></SelectTrigger>
                     <SelectContent>
@@ -928,7 +938,7 @@ export function SLAManagement() {
                   </Select>
                   {hasFilters && (
                     <Button variant="ghost" size="sm" className="h-8 text-[12px] text-muted-foreground"
-                      onClick={() => { setSearch(''); setStatusFilter('all'); setCompanyFilter('all'); setYearFilter('all'); }}>
+                      onClick={() => { setSearch(''); setStatusFilter('all'); setSupportTypeFilter('all'); setCompanyFilter('all'); setYearFilter('all'); }}>
                       <Filter className="w-3 h-3 mr-1" />
                       Clear
                     </Button>
@@ -1043,7 +1053,7 @@ export function SLAManagement() {
                             </div>
                             {hasFilters && (
                               <Button variant="outline" size="sm" className="text-[13px]"
-                                onClick={() => { setSearch(''); setStatusFilter('all'); setCompanyFilter('all'); setYearFilter('all'); }}>
+                                onClick={() => { setSearch(''); setStatusFilter('all'); setSupportTypeFilter('all'); setCompanyFilter('all'); setYearFilter('all'); }}>
                                 Clear filters
                               </Button>
                             )}
