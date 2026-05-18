@@ -20,6 +20,7 @@ import {
   HelpCircle,
   Mail,
   BarChart2,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -54,6 +55,7 @@ const navGroups = [
     items: [
       { name: 'Tickets', href: '/tickets', icon: Ticket, exact: false },
       { name: 'Support', href: '/support', icon: LifeBuoy, exact: false },
+      { name: 'SLA Management', href: '/sla', icon: ShieldCheck, exact: false },
       { name: 'Email Support', href: '/email-support', icon: Mail, exact: false },
       { name: 'Knowledge Base', href: '/knowledge', icon: BookOpen, exact: false },
       { name: 'Reports', href: '/reports', icon: BarChart2, exact: false },

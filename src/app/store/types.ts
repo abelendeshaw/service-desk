@@ -156,3 +156,16 @@ export type TicketArticle = {
   updatedAt: string;
 };
 
+export type SLAStatus = "Active" | "Expiring Soon" | "Expired" | "Upcoming";
+
+export type SLA = {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  companyName: string;
+  projectName: string;
+  startDate: string;
+  endDate: string;
+  notes: string;
+};
+

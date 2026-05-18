@@ -18,6 +18,9 @@ import { CreateArticle } from "./pages/CreateArticle";
 import { Support } from "./pages/Support";
 import { SupportDetail } from "./pages/SupportDetail";
 import { CreateSupport } from "./pages/CreateSupport";
+import { SLAManagement } from "./pages/SLAManagement";
+import { CreateSLA } from "./pages/CreateSLA";
+import { SLADetail } from "./pages/SLADetail";
 import { EmailSupport } from "./pages/EmailSupport";
 import { EmailSupportDetail } from "./pages/EmailSupportDetail";
 import { CreateEmailSupport } from "./pages/CreateEmailSupport";
@@ -49,6 +52,9 @@ export const router = createBrowserRouter([
       { path: "support", Component: Support },
       { path: "support/new", Component: CreateSupport },
       { path: "support/:id", Component: SupportDetail },
+      { path: "sla", Component: SLAManagement },
+      { path: "sla/new", Component: CreateSLA },
+      { path: "sla/:id", Component: SLADetail },
       { path: "email-support", Component: EmailSupport },
       { path: "email-support/new", Component: CreateEmailSupport },
       { path: "email-support/:id", Component: EmailSupportDetail },
