@@ -1,4 +1,4 @@
-import type { EmailThread, Engineer, Ticket } from "./types";
+import type { EmailThread, Engineer, SLA, Ticket } from "./types";
 
 const now = () => new Date().toISOString();
 
@@ -312,6 +312,89 @@ export const seedNotifications = [
     href: "/tickets/00135",
     unread: true,
     kind: "assignment" as const,
+  },
+];
+
+export const seedSLAs: SLA[] = [
+  {
+    id: "SLA-001",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    companyName: "EPSS",
+    projectName: "EPSS Enterprise Support",
+    startDate: "2026-01-01",
+    endDate: "2026-12-31",
+    notes: "Annual enterprise support agreement covering network, server, and end-user support.",
+  },
+  {
+    id: "SLA-002",
+    createdAt: "2026-01-15T00:00:00.000Z",
+    updatedAt: "2026-01-15T00:00:00.000Z",
+    companyName: "IE Innovation Ethiopia",
+    projectName: "IE Managed Services",
+    startDate: "2026-01-15",
+    endDate: "2026-06-14",
+    notes: "6-month managed services contract for infrastructure monitoring and maintenance.",
+  },
+  {
+    id: "SLA-003",
+    createdAt: "2025-07-01T00:00:00.000Z",
+    updatedAt: "2025-07-01T00:00:00.000Z",
+    companyName: "ERA/MOTL",
+    projectName: "ERA Infrastructure Support",
+    startDate: "2025-07-01",
+    endDate: "2026-06-30",
+    notes: "12-month infrastructure support for road authority network and server systems.",
+  },
+  {
+    id: "SLA-004",
+    createdAt: "2025-10-01T00:00:00.000Z",
+    updatedAt: "2025-10-01T00:00:00.000Z",
+    companyName: "MinT",
+    projectName: "MinT Network Support",
+    startDate: "2025-10-01",
+    endDate: "2026-05-31",
+    notes: "Ministry of Innovation & Technology network support and NOC services.",
+  },
+  {
+    id: "SLA-005",
+    createdAt: "2025-01-01T00:00:00.000Z",
+    updatedAt: "2025-01-01T00:00:00.000Z",
+    companyName: "ESLSE",
+    projectName: "ESLSE Logistics IT Support",
+    startDate: "2025-01-01",
+    endDate: "2025-12-31",
+    notes: "Ethiopian Shipping & Logistics IT support — completed contract.",
+  },
+  {
+    id: "SLA-006",
+    createdAt: "2026-02-01T00:00:00.000Z",
+    updatedAt: "2026-02-01T00:00:00.000Z",
+    companyName: "MoTI",
+    projectName: "MoTI General IT Support",
+    startDate: "2026-02-01",
+    endDate: "2026-07-31",
+    notes: "Ministry of Trade & Industry helpdesk and general IT support.",
+  },
+  {
+    id: "SLA-007",
+    createdAt: "2026-05-10T00:00:00.000Z",
+    updatedAt: "2026-05-10T00:00:00.000Z",
+    companyName: "CBE",
+    projectName: "CBE Branch Network Rollout",
+    startDate: "2026-06-01",
+    endDate: "2027-05-31",
+    notes: "Commercial Bank of Ethiopia branch network rollout and 12-month support contract.",
+  },
+  {
+    id: "SLA-008",
+    createdAt: "2025-10-01T00:00:00.000Z",
+    updatedAt: "2025-10-01T00:00:00.000Z",
+    companyName: "Ethio Telecom",
+    projectName: "EthioTel Data Centre Support",
+    startDate: "2025-10-01",
+    endDate: "2026-03-31",
+    notes: "Data centre co-location and support services — expired contract pending renewal.",
   },
 ];
 

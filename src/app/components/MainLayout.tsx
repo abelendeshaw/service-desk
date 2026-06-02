@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { Outlet, NavLink, useNavigate } from "react-router";
+import { toast } from "sonner";
 import {
   LayoutDashboard,
   Ticket,
@@ -22,7 +22,8 @@ import {
   BarChart2,
   MonitorSmartphone,
   Wrench,
-} from 'lucide-react';
+  ShieldCheck,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,43 +33,64 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from './ui/alert-dialog';
+} from "./ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from './ui/dropdown-menu';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { useServiceDesk } from '../store/serviceDeskStore';
+} from "./ui/dropdown-menu";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { useServiceDesk } from "../store/serviceDeskStore";
 
 const navGroups = [
   {
-    label: 'Overview',
+    label: "Overview",
     items: [
-      { name: 'Dashboard', href: '/', icon: LayoutDashboard, exact: true },
-      { name: 'Client Portal', href: '/client-dashboard', icon: MonitorSmartphone, exact: false },
-      { name: 'Engineer View', href: '/engineer-dashboard', icon: Wrench, exact: false },
+      { name: "Dashboard", href: "/", icon: LayoutDashboard, exact: true },
+      {
+        name: "Client Portal",
+        href: "/client-dashboard",
+        icon: MonitorSmartphone,
+        exact: false,
+      },
+      {
+        name: "Engineer View",
+        href: "/engineer-dashboard",
+        icon: Wrench,
+        exact: false,
+      },
     ],
   },
   {
-    label: 'Helpdesk',
+    label: "Helpdesk",
     items: [
-      { name: 'Tickets', href: '/tickets', icon: Ticket, exact: false },
-      { name: 'Support', href: '/support', icon: LifeBuoy, exact: false },
-      { name: 'Email Support', href: '/email-support', icon: Mail, exact: false },
-      { name: 'Knowledge Base', href: '/knowledge', icon: BookOpen, exact: false },
-      { name: 'Reports', href: '/reports', icon: BarChart2, exact: false },
+      { name: "Tickets", href: "/tickets", icon: Ticket, exact: false },
+      { name: "Support", href: "/support", icon: LifeBuoy, exact: false },
+      { name: "SLA Management", href: "/sla", icon: ShieldCheck, exact: false },
+      {
+        name: "Email Support",
+        href: "/email-support",
+        icon: Mail,
+        exact: false,
+      },
+      {
+        name: "Knowledge Base",
+        href: "/knowledge",
+        icon: BookOpen,
+        exact: false,
+      },
+      { name: "Reports", href: "/reports", icon: BarChart2, exact: false },
     ],
   },
   {
-    label: 'Directory',
+    label: "Directory",
     items: [
-      { name: 'Contacts', href: '/contacts', icon: Users, exact: false },
-      { name: 'Companies', href: '/companies', icon: Building2, exact: false },
-      { name: 'Employees', href: '/employees', icon: UserCircle, exact: false },
+      { name: "Contacts", href: "/contacts", icon: Users, exact: false },
+      { name: "Companies", href: "/companies", icon: Building2, exact: false },
+      { name: "Employees", href: "/employees", icon: UserCircle, exact: false },
     ],
   },
 ];
@@ -82,18 +104,20 @@ export function MainLayout() {
 
   const confirmLogout = () => {
     setLogoutOpen(false);
-    toast.success('Logged out successfully');
-    navigate('/login');
+    toast.success("Logged out successfully");
+    navigate("/login");
   };
 
   return (
     <div className="bg-muted flex h-screen overflow-hidden">
       {/* Sidebar */}
       <aside
-        className={`${sidebarCollapsed ? 'w-[60px]' : 'w-[220px]'} bg-sidebar text-sidebar-foreground flex flex-col flex-shrink-0 transition-all duration-200`}
+        className={`${sidebarCollapsed ? "w-[60px]" : "w-[220px]"} bg-sidebar text-sidebar-foreground flex flex-col flex-shrink-0 transition-all duration-200`}
       >
         {/* Logo */}
-        <div className={`border-sidebar-border h-[56px] flex items-center border-b flex-shrink-0 ${sidebarCollapsed ? 'px-4 justify-center' : 'px-5'}`}>
+        <div
+          className={`border-sidebar-border h-[56px] flex items-center border-b flex-shrink-0 ${sidebarCollapsed ? "px-4 justify-center" : "px-5"}`}
+        >
           {sidebarCollapsed ? (
             <div className="bg-secondary text-secondary-foreground flex size-7 items-center justify-center rounded-md flex-shrink-0">
               <Ticket className="text-secondary-foreground w-4 h-4" />
@@ -104,8 +128,12 @@ export function MainLayout() {
                 <Ticket className="text-secondary-foreground w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-white text-sm font-semibold leading-tight truncate">Service Desk</div>
-                <div className="text-sidebar-foreground/60 text-xs leading-tight">Workspace</div>
+                <div className="text-white text-sm font-semibold leading-tight truncate">
+                  Service Desk
+                </div>
+                <div className="text-sidebar-foreground/60 text-xs leading-tight">
+                  Workspace
+                </div>
               </div>
             </div>
           )}
@@ -117,7 +145,9 @@ export function MainLayout() {
             <div key={group.label}>
               {!sidebarCollapsed && (
                 <div className="mb-1 px-2">
-                  <span className="text-sidebar-foreground/60 text-[10px] uppercase tracking-widest font-semibold">{group.label}</span>
+                  <span className="text-sidebar-foreground/60 text-[10px] uppercase tracking-widest font-semibold">
+                    {group.label}
+                  </span>
                 </div>
               )}
               <div className="flex flex-col gap-0.5">
@@ -129,9 +159,9 @@ export function MainLayout() {
                     className={({ isActive }) =>
                       `flex items-center gap-3 px-2 py-2 rounded-md transition-all duration-100 group relative ${
                         isActive
-                          ? 'bg-white text-primary dark:bg-sidebar-muted dark:text-sidebar-foreground'
-                          : 'text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent'
-                      } ${sidebarCollapsed ? 'justify-center' : ''}`
+                          ? "bg-white text-primary dark:bg-sidebar-muted dark:text-sidebar-foreground"
+                          : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                      } ${sidebarCollapsed ? "justify-center" : ""}`
                     }
                   >
                     {({ isActive }) => (
@@ -140,10 +170,12 @@ export function MainLayout() {
                           <div className="bg-sidebar-accent absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full" />
                         )}
                         <item.icon
-                          className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-primary dark:text-sidebar-foreground' : ''}`}
+                          className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-primary dark:text-sidebar-foreground" : ""}`}
                         />
                         {!sidebarCollapsed && (
-                          <span className="text-[13px] font-medium truncate">{item.name}</span>
+                          <span className="text-[13px] font-medium truncate">
+                            {item.name}
+                          </span>
                         )}
                       </>
                     )}
@@ -161,9 +193,9 @@ export function MainLayout() {
             className={({ isActive }) =>
               `flex items-center gap-3 px-2 py-2 rounded-md transition-all group relative ${
                 isActive
-                  ? 'bg-white text-primary dark:bg-sidebar-muted dark:text-sidebar-foreground'
-                  : 'text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent'
-              } ${sidebarCollapsed ? 'justify-center' : ''}`
+                  ? "bg-white text-primary dark:bg-sidebar-muted dark:text-sidebar-foreground"
+                  : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+              } ${sidebarCollapsed ? "justify-center" : ""}`
             }
           >
             {({ isActive }) => (
@@ -172,7 +204,9 @@ export function MainLayout() {
                   <div className="bg-sidebar-accent absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full" />
                 )}
                 <SettingsIcon className="w-4 h-4 flex-shrink-0" />
-                {!sidebarCollapsed && <span className="text-[13px] font-medium">Settings</span>}
+                {!sidebarCollapsed && (
+                  <span className="text-[13px] font-medium">Settings</span>
+                )}
               </>
             )}
           </NavLink>
@@ -185,8 +219,12 @@ export function MainLayout() {
                   AT
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-white text-xs font-medium truncate">Abraham Tayu</div>
-                  <div className="text-sidebar-foreground/60 text-[11px] truncate">Admin</div>
+                  <div className="text-white text-xs font-medium truncate">
+                    Abraham Tayu
+                  </div>
+                  <div className="text-sidebar-foreground/60 text-[11px] truncate">
+                    Admin
+                  </div>
                 </div>
                 <Button
                   variant="ghost"
@@ -203,7 +241,7 @@ export function MainLayout() {
           <Button
             variant="ghost"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className={`text-sidebar-foreground/70 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent h-auto w-full items-center gap-3 rounded-md px-2 py-2 ${sidebarCollapsed ? 'justify-center' : ''}`}
+            className={`text-sidebar-foreground/70 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent h-auto w-full items-center gap-3 rounded-md px-2 py-2 ${sidebarCollapsed ? "justify-center" : ""}`}
           >
             {sidebarCollapsed ? (
               <PanelLeftOpen className="w-4 h-4" />
@@ -241,24 +279,39 @@ export function MainLayout() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onSelect={() => navigate('/tickets/new')} className="text-[13px]">
+                <DropdownMenuItem
+                  onSelect={() => navigate("/tickets/new")}
+                  className="text-[13px]"
+                >
                   <Ticket className="w-3.5 h-3.5 mr-2" />
                   New Ticket
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => navigate('/support/new')} className="text-[13px]">
+                <DropdownMenuItem
+                  onSelect={() => navigate("/support/new")}
+                  className="text-[13px]"
+                >
                   <LifeBuoy className="w-3.5 h-3.5 mr-2" />
                   New Support
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => navigate('/email-support/new')} className="text-[13px]">
+                <DropdownMenuItem
+                  onSelect={() => navigate("/email-support/new")}
+                  className="text-[13px]"
+                >
                   <Mail className="w-3.5 h-3.5 mr-2" />
                   Compose Email
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => navigate('/contacts')} className="text-[13px]">
+                <DropdownMenuItem
+                  onSelect={() => navigate("/contacts")}
+                  className="text-[13px]"
+                >
                   <Users className="w-3.5 h-3.5 mr-2" />
                   New Contact
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => navigate('/companies')} className="text-[13px]">
+                <DropdownMenuItem
+                  onSelect={() => navigate("/companies")}
+                  className="text-[13px]"
+                >
                   <Building2 className="w-3.5 h-3.5 mr-2" />
                   New Company
                 </DropdownMenuItem>
@@ -267,7 +320,11 @@ export function MainLayout() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative size-8">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-foreground relative size-8"
+                >
                   <Bell className="w-4 h-4" />
                   {unreadCount > 0 && (
                     <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-background" />
@@ -284,7 +341,9 @@ export function MainLayout() {
                     }}
                   >
                     <span className="font-medium">{n.title}</span>
-                    <span className="text-xs text-muted-foreground">{n.detail ?? new Date(n.createdAt).toLocaleString()}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {n.detail ?? new Date(n.createdAt).toLocaleString()}
+                    </span>
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
@@ -299,7 +358,11 @@ export function MainLayout() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground size-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground size-8"
+            >
               <HelpCircle className="w-4 h-4" />
             </Button>
 
@@ -307,13 +370,20 @@ export function MainLayout() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-auto gap-2 px-0 hover:bg-transparent">
+                <Button
+                  variant="ghost"
+                  className="h-auto gap-2 px-0 hover:bg-transparent"
+                >
                   <div className="bg-primary text-primary-foreground flex size-7 items-center justify-center rounded-full text-xs font-semibold">
                     AT
                   </div>
                   <div className="text-left hidden sm:block">
-                    <div className="text-foreground text-[13px] font-medium leading-tight">Abraham Tayu</div>
-                    <div className="text-muted-foreground text-[11px] leading-tight">Admin</div>
+                    <div className="text-foreground text-[13px] font-medium leading-tight">
+                      Abraham Tayu
+                    </div>
+                    <div className="text-muted-foreground text-[11px] leading-tight">
+                      Admin
+                    </div>
                   </div>
                 </Button>
               </DropdownMenuTrigger>
@@ -322,12 +392,18 @@ export function MainLayout() {
                   <UserCircle className="w-3.5 h-3.5 mr-2" />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/settings')} className="text-[13px]">
+                <DropdownMenuItem
+                  onClick={() => navigate("/settings")}
+                  className="text-[13px]"
+                >
                   <SettingsIcon className="w-3.5 h-3.5 mr-2" />
                   Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-[13px] text-red-600" onSelect={() => setLogoutOpen(true)}>
+                <DropdownMenuItem
+                  className="text-[13px] text-red-600"
+                  onSelect={() => setLogoutOpen(true)}
+                >
                   <LogOut className="w-3.5 h-3.5 mr-2" />
                   Logout
                 </DropdownMenuItem>
@@ -352,7 +428,9 @@ export function MainLayout() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmLogout}>Logout</AlertDialogAction>
+            <AlertDialogAction onClick={confirmLogout}>
+              Logout
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

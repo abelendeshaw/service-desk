@@ -1,12 +1,13 @@
 import React from "react";
 import { toast } from "sonner";
-import { seedEmailThreads, seedEngineers, seedNotifications, seedTickets } from "./seed";
+import { seedEmailThreads, seedEngineers, seedNotifications, seedSLAs, seedTickets } from "./seed";
 import type {
   Attachment,
   EmailThread,
   Engineer,
   EscalationTarget,
   Notification,
+  SLA,
   Ticket,
   TicketArticle,
   TicketArticleStatus,
@@ -20,6 +21,7 @@ type State = {
   emailThreads: EmailThread[];
   notifications: Notification[];
   ticketArticles: Record<string, TicketArticle>;
+  slas: SLA[];
 };
 
 type Actions = {
@@ -65,6 +67,10 @@ type Actions = {
     status: TicketArticleStatus;
   }): void;
   resetToSeed(): void;
+  createSLA(input: { companyName: string; projectName: string; startDate: string; endDate: string; notes: string }): string;
+  updateSLA(input: { id: string; companyName: string; projectName: string; startDate: string; endDate: string; notes: string }): void;
+  deleteSLA(id: string): void;
+  importSLAs(rows: Array<{ companyName: string; projectName: string; startDate: string; endDate: string }>): number;
 };
 
 type Store = State & Actions;
@@ -112,6 +118,7 @@ function loadInitialState(): State {
       emailThreads: parsed.emailThreads,
       notifications: parsed.notifications ?? [],
       ticketArticles: parsed.ticketArticles ?? {},
+      slas: (parsed as State).slas ?? seedSLAs,
     };
   } catch {
     const seedTicketArticles: Record<string, TicketArticle> = Object.fromEntries(
@@ -134,6 +141,7 @@ function loadInitialState(): State {
       emailThreads: seedEmailThreads,
       notifications: seedNotifications,
       ticketArticles: seedTicketArticles,
+      slas: seedSLAs,
     };
   }
 }
@@ -623,6 +631,70 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
 
       resetToSeed: () => {
         localStorage.removeItem(STORAGE_KEY);
+      },
+
+      createSLA: ({ companyName, projectName, startDate, endDate, notes }) => {
+        const id = `SLA-${String(Math.floor(100 + Math.random() * 900))}`;
+        const now = new Date().toISOString();
+        const isDuplicate = (prev: State) =>
+          prev.slas.some(
+            (s) =>
+              s.companyName.toLowerCase() === companyName.toLowerCase() &&
+              s.projectName.toLowerCase() === projectName.toLowerCase(),
+          );
+        let created = false;
+        setAndPersist((prev) => {
+          if (isDuplicate(prev)) return prev;
+          created = true;
+          const newSLA: SLA = { id, createdAt: now, updatedAt: now, companyName, projectName, startDate, endDate, notes };
+          return { ...prev, slas: [newSLA, ...prev.slas] };
+        });
+        if (created) {
+          toast.success(`SLA ${id} created`);
+          notify({ title: `SLA created for ${companyName}`, detail: projectName, href: `/sla/${id}`, unread: true, kind: "system" });
+        } else {
+          toast.error("Duplicate SLA — same company and project already exists.");
+        }
+        return id;
+      },
+
+      updateSLA: ({ id, companyName, projectName, startDate, endDate, notes }) => {
+        const now = new Date().toISOString();
+        setAndPersist((prev) => ({
+          ...prev,
+          slas: prev.slas.map((s) =>
+            s.id === id ? { ...s, companyName, projectName, startDate, endDate, notes, updatedAt: now } : s,
+          ),
+        }));
+        toast.success("SLA updated");
+      },
+
+      deleteSLA: (id) => {
+        setAndPersist((prev) => ({ ...prev, slas: prev.slas.filter((s) => s.id !== id) }));
+        toast.success("SLA deleted");
+      },
+
+      importSLAs: (rows) => {
+        const now = new Date().toISOString();
+        let imported = 0;
+        setAndPersist((prev) => {
+          const next = [...prev.slas];
+          for (const row of rows) {
+            const duplicate = next.some(
+              (s) =>
+                s.companyName.toLowerCase() === row.companyName.toLowerCase() &&
+                s.projectName.toLowerCase() === row.projectName.toLowerCase(),
+            );
+            if (duplicate) continue;
+            const id = `SLA-${String(Math.floor(100 + Math.random() * 900))}-${Date.now().toString(16).slice(-4)}`;
+            next.unshift({ id, createdAt: now, updatedAt: now, notes: "", ...row });
+            imported++;
+          }
+          return { ...prev, slas: next };
+        });
+        if (imported > 0) toast.success(`Imported ${imported} SLA${imported !== 1 ? "s" : ""}`);
+        else toast.warning("No new SLAs imported (duplicates skipped)");
+        return imported;
       },
     }),
     [notify, setAndPersist],
