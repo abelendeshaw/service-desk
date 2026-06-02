@@ -20,6 +20,8 @@ import {
   HelpCircle,
   Mail,
   BarChart2,
+  MonitorSmartphone,
+  Wrench,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -47,6 +49,8 @@ const navGroups = [
     label: 'Overview',
     items: [
       { name: 'Dashboard', href: '/', icon: LayoutDashboard, exact: true },
+      { name: 'Client Portal', href: '/client-dashboard', icon: MonitorSmartphone, exact: false },
+      { name: 'Engineer View', href: '/engineer-dashboard', icon: Wrench, exact: false },
     ],
   },
   {

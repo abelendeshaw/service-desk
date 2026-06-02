@@ -24,6 +24,8 @@ import { CreateEmailSupport } from "./pages/CreateEmailSupport";
 import { Settings } from "./pages/Settings";
 import { Reports } from "./pages/Reports";
 import { ReportDetail } from "./pages/ReportDetail";
+import { ClientDashboard } from "./pages/ClientDashboard";
+import { EngineerDashboard } from "./pages/EngineerDashboard";
 
 export const router = createBrowserRouter([
   { path: "/login", Component: Login },
@@ -54,6 +56,8 @@ export const router = createBrowserRouter([
       { path: "email-support/:id", Component: EmailSupportDetail },
       { path: "reports", Component: Reports },
       { path: "reports/:id", Component: ReportDetail },
+      { path: "client-dashboard", Component: ClientDashboard },
+      { path: "engineer-dashboard", Component: EngineerDashboard },
       { path: "settings", Component: Settings },
     ],
   },
