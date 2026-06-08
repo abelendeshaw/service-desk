@@ -1,4 +1,10 @@
 import React, { useState } from 'react';
+
+declare global {
+  interface Window {
+    FS?: (...args: unknown[]) => void;
+  }
+}
 import { useNavigate } from 'react-router';
 import {
   Ticket,
@@ -58,6 +64,19 @@ export function Login() {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
+      if (typeof window.FS === 'function') {
+        const displayName = email
+          .split('@')[0]
+          .replace(/[._-]/g, ' ')
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+        window.FS('setIdentity', {
+          uid: email,
+          properties: {
+            displayName,
+            email,
+          },
+        });
+      }
       navigate('/');
     }, 800);
   };
