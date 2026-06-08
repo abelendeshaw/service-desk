@@ -1,19 +1,26 @@
 import { useState } from "react";
 import {
+  ArrowLeft,
+  Calendar,
   Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Clock3,
   Download,
   Edit,
   Eye,
+  Key,
   Lock,
+  Mail,
   MoreHorizontal,
   Plus,
+  RefreshCw,
   Search,
   Shield,
   Trash2,
+  User,
   UserCheck,
   UserMinus,
   UserPlus,
@@ -62,6 +69,7 @@ interface SDUser {
   status: UserStatus;
   joinedAt: string;
   lastActive: string;
+  customPermissions?: Record<string, Record<string, boolean>>;
 }
 
 interface Role {
@@ -175,6 +183,225 @@ function getInitials(name: string) {
 function getAvatarColor(name: string) {
   const idx = name.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % avatarColors.length;
   return avatarColors[idx];
+}
+
+// ─── Detail helpers ───────────────────────────────────────────────────────────
+const TEAMS = ["—", "END Team", "ICT Field Team", "CSD Team", "NOC Team"];
+
+function getRolePermissions(role: UserRole): Record<string, Record<string, boolean>> {
+  const found = initialRoles.find((r) => r.name === role);
+  if (found) return JSON.parse(JSON.stringify(found.permissions));
+  return Object.fromEntries(SD_MODULES.map((m) => [m, Object.fromEntries(SD_ACTIONS.map((a) => [a, false]))]));
+}
+
+function DetailField({
+  label, value, isEditing, children, icon,
+}: {
+  label: string; value: string; isEditing: boolean; children?: React.ReactNode; icon?: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs text-muted-foreground flex items-center gap-1">
+        {icon && <span className="text-muted-foreground/60">{icon}</span>}
+        {label}
+      </Label>
+      {isEditing && children ? children : (
+        <div className="bg-muted border border-border rounded-md px-3 py-2.5 text-sm text-foreground min-h-[38px] flex items-center">
+          {value || "—"}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const detailSections = [
+  { id: "profile" as const,     label: "Profile",     hint: "Identity and role details",  icon: <User size={13} /> },
+  { id: "permissions" as const, label: "Permissions", hint: "Module access matrix",        icon: <Key  size={13} /> },
+];
+
+function UserDetailView({
+  user, users, onBack, onUpdate,
+}: {
+  user: SDUser; users: SDUser[]; onBack: () => void; onUpdate: (u: SDUser) => void;
+}) {
+  const [section, setSection]       = useState<"profile" | "permissions">("profile");
+  const [isEditing, setIsEditing]   = useState(false);
+  const [editData, setEditData]     = useState<SDUser>({ ...user });
+  const [permissions, setPermissions] = useState<Record<string, Record<string, boolean>>>(
+    () => user.customPermissions ?? getRolePermissions(user.role),
+  );
+
+  const handleChange = (partial: Partial<SDUser>) => setEditData((p) => ({ ...p, ...partial }));
+
+  const handleRoleChange = (role: UserRole) => {
+    setEditData((p) => ({ ...p, role }));
+    setPermissions(getRolePermissions(role));
+  };
+
+  const handleSave = () => {
+    onUpdate({ ...editData, customPermissions: permissions });
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditData({ ...user });
+    setPermissions(user.customPermissions ?? getRolePermissions(user.role));
+    setIsEditing(false);
+  };
+
+  const togglePermission = (mod: string, action: string, val: boolean) =>
+    setPermissions((p) => ({ ...p, [mod]: { ...p[mod], [action]: val } }));
+
+  return (
+    <div className="flex flex-col h-full -m-3 sm:-m-5">
+      {/* Header */}
+      <div className="bg-background border-b border-border px-6 pt-4 pb-0 flex-shrink-0">
+        <div className="flex items-center justify-between pb-4">
+          <Button
+            variant="ghost" size="sm"
+            className="gap-1.5 text-muted-foreground hover:text-foreground -ml-2 h-8"
+            onClick={onBack}
+          >
+            <ArrowLeft size={14} />
+            All Users
+          </Button>
+          <div className="flex items-center gap-2">
+            {isEditing ? (
+              <>
+                <Button variant="outline" size="sm" className="border-border h-8 gap-1.5" onClick={handleCancel}>
+                  <X size={13} /> Cancel
+                </Button>
+                <Button size="sm" className="bg-primary hover:bg-primary/90 text-white h-8 gap-1.5" onClick={handleSave}>
+                  <Check size={13} /> Save Changes
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" size="sm" className="border-border h-8 gap-1.5" onClick={() => setIsEditing(true)}>
+                <Edit size={13} /> Edit User
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Hero */}
+        <div className="flex items-center gap-4 pb-4 border-b border-border">
+          <Avatar className="h-14 w-14 flex-shrink-0">
+            <AvatarFallback className={cn(getAvatarColor(user.name), "text-white text-lg font-semibold")}>
+              {getInitials(user.name)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <h2 className="font-semibold text-foreground">{editData.name}</h2>
+              <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium", roleColors[user.role])}>
+                {user.role}
+              </span>
+              <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium", statusConfig[user.status].className)}>
+                {user.status}
+              </span>
+            </div>
+            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+              <span className="flex items-center gap-1"><Mail size={11} />{user.email}</span>
+              <span className="flex items-center gap-1"><Users size={11} />{user.team}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-6 bg-muted/30">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+          {/* Sidebar */}
+          <aside className="w-full lg:w-[220px] lg:min-w-[220px]">
+            <div className="flex flex-col gap-2">
+              {detailSections.map((s) => (
+                <button
+                  key={s.id} type="button"
+                  onClick={() => setSection(s.id)}
+                  className={cn(
+                    "rounded-lg border px-3 py-2 text-left transition-colors",
+                    section === s.id ? "border-primary bg-primary/5" : "border-border bg-background hover:border-primary/30",
+                  )}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className={section === s.id ? "text-primary" : "text-muted-foreground"}>{s.icon}</span>
+                    <span className={cn("text-sm font-medium", section === s.id ? "text-primary" : "text-foreground")}>{s.label}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{s.hint}</p>
+                </button>
+              ))}
+            </div>
+          </aside>
+
+          {/* Main */}
+          <div className="min-w-0 flex-1">
+            {section === "profile" && (
+              <div className="rounded-lg border border-border bg-background p-5">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <DetailField label="Full Name" value={editData.name} isEditing={isEditing} icon={<User size={11} />}>
+                    <Input value={editData.name} onChange={(e) => handleChange({ name: e.target.value })} className="h-9 border-border" placeholder="Full name" />
+                  </DetailField>
+                  <DetailField label="Email Address" value={editData.email} isEditing={isEditing} icon={<Mail size={11} />}>
+                    <Input type="email" value={editData.email} onChange={(e) => handleChange({ email: e.target.value })} className="h-9 border-border" />
+                  </DetailField>
+                  <DetailField label="Role" value={editData.role} isEditing={isEditing} icon={<Key size={11} />}>
+                    <Select value={editData.role} onValueChange={(v) => handleRoleChange(v as UserRole)}>
+                      <SelectTrigger className="h-9 border-border"><SelectValue /></SelectTrigger>
+                      <SelectContent>{ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </DetailField>
+                  <DetailField label="Account Status" value={editData.status} isEditing={isEditing} icon={<Shield size={11} />}>
+                    <Select value={editData.status} onValueChange={(v) => handleChange({ status: v as UserStatus })}>
+                      <SelectTrigger className="h-9 border-border"><SelectValue /></SelectTrigger>
+                      <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </DetailField>
+                  <DetailField label="Team" value={editData.team} isEditing={isEditing} icon={<Users size={11} />}>
+                    <Select value={editData.team} onValueChange={(v) => handleChange({ team: v })}>
+                      <SelectTrigger className="h-9 border-border"><SelectValue /></SelectTrigger>
+                      <SelectContent>{TEAMS.map((t) => <SelectItem key={t} value={t}>{t === "—" ? "No Team" : t}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </DetailField>
+                  <DetailField label="Joined Date"  value={editData.joinedAt}    isEditing={false} icon={<Calendar size={11} />} />
+                  <DetailField label="Last Active"  value={editData.lastActive}  isEditing={false} icon={<Clock size={11} />} />
+                </div>
+              </div>
+            )}
+
+            {section === "permissions" && (
+              <div className="rounded-lg border border-border bg-background overflow-hidden">
+                <div className="flex items-start justify-between px-5 py-4 border-b border-border gap-4">
+                  <div>
+                    <h3 className="font-medium text-foreground">Module Permissions</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {isEditing
+                        ? "Toggle individual permissions. Changes override role defaults for this user."
+                        : "Showing permissions for this user. Switch to edit mode to customize."}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md">
+                      Based on: <span className="font-medium text-foreground">{editData.role}</span>
+                    </span>
+                    {isEditing && (
+                      <Button variant="outline" size="sm" className="h-8 border-border text-xs gap-1.5" onClick={() => setPermissions(getRolePermissions(editData.role))}>
+                        <RefreshCw size={11} /> Reset
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <PermissionsMatrix
+                  permissions={permissions}
+                  readOnly={!isEditing}
+                  onChange={isEditing ? togglePermission : undefined}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ─── Permissions Matrix ───────────────────────────────────────────────────────
@@ -310,6 +537,7 @@ function RoleTabButton({
 // ─── Users Tab ────────────────────────────────────────────────────────────────
 function UsersTab() {
   const [users, setUsers]             = useState<SDUser[]>(initialUsers);
+  const [detailUser, setDetailUser]   = useState<SDUser | null>(null);
   const [search, setSearch]           = useState("");
   const [filterRole, setFilterRole]   = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -348,6 +576,11 @@ function UsersTab() {
     setSelected((p) => p.filter((x) => x !== id));
   };
 
+  const handleUpdateUser = (updated: SDUser) => {
+    setUsers((p) => p.map((u) => (u.id === updated.id ? updated : u)));
+    setDetailUser(updated);
+  };
+
   const existingEmails     = new Set(users.map((u) => u.email.toLowerCase()));
   const candidates         = KNOWN_CANDIDATES.filter((c) => !existingEmails.has(c.email.toLowerCase()));
   const filteredCandidates = candidates.filter(
@@ -368,6 +601,17 @@ function UsersTab() {
     setInviteForm({ candidateIds: [], role: "Field Engineer" });
     setInviteSearch("");
   };
+
+  if (detailUser) {
+    return (
+      <UserDetailView
+        user={detailUser}
+        users={users}
+        onBack={() => setDetailUser(null)}
+        onUpdate={handleUpdateUser}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -474,11 +718,11 @@ function UsersTab() {
                 <tr
                   key={user.id}
                   className="border-b border-[#f0f2f7] transition-colors hover:bg-muted/40 cursor-pointer"
+                  onClick={() => setDetailUser(user)}
                 >
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={selected.includes(user.id)}
-                      onClick={(e) => e.stopPropagation()}
                       onCheckedChange={() => toggleSelect(user.id)}
                     />
                   </td>
@@ -509,18 +753,18 @@ function UsersTab() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{user.lastActive}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted">
                           <MoreHorizontal size={15} />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuItem className="text-sm cursor-pointer">
+                        <DropdownMenuItem className="text-sm cursor-pointer" onClick={(e) => { e.stopPropagation(); setDetailUser(user); }}>
                           <Eye size={13} className="mr-2" /> View Profile
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-sm cursor-pointer">
+                        <DropdownMenuItem className="text-sm cursor-pointer" onClick={(e) => { e.stopPropagation(); setDetailUser(user); }}>
                           <Edit size={13} className="mr-2" /> Edit User
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
