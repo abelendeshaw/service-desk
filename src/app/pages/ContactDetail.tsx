@@ -82,11 +82,6 @@ const contactsData = [
   },
 ];
 
-const tierConfig: Record<string, { badgeClass: string }> = {
-  Enterprise: { badgeClass: 'bg-violet-50 text-violet-700 border-violet-200' },
-  Premium:    { badgeClass: 'bg-amber-50 text-amber-700 border-amber-200' },
-  Standard:   { badgeClass: 'bg-slate-50 text-slate-600 border-slate-200' },
-};
 
 const sampleTickets = [
   { id: '#00135', subject: 'VPN access intermittent', status: 'Open', priority: 'High', age: '3d' },
@@ -110,8 +105,6 @@ export function ContactDetail() {
     () => contactsData.find((c) => c.email === decodeURIComponent(id ?? '')) ?? contactsData[0],
     [id],
   );
-
-  const tc = tierConfig[contact.tier];
 
   return (
     <div className="flex h-full flex-col bg-muted/30">
@@ -143,7 +136,7 @@ export function ContactDetail() {
                 </Badge>
               </div>
               <p className="mt-0.5 text-[13px] text-muted-foreground">
-                {contact.role} · <span className="font-medium text-foreground">{contact.company}</span>
+                <span className="font-medium text-foreground">{contact.company}</span>
               </p>
             </div>
           </div>
@@ -193,14 +186,6 @@ export function ContactDetail() {
                 </div>
                 <Separator />
                 <div className="flex items-center gap-3">
-                  <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <div>
-                    <div className="text-[11px] text-muted-foreground">Role</div>
-                    <div className="text-[13px]">{contact.role}</div>
-                  </div>
-                </div>
-                <Separator />
-                <div className="flex items-center gap-3">
                   <Building2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   <div>
                     <div className="text-[11px] text-muted-foreground">Organization</div>
@@ -213,13 +198,10 @@ export function ContactDetail() {
             {/* Company Details — SECOND */}
             <Card className="gap-0 p-0">
               <CardHeader className="border-b px-5 py-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-[14px]">
-                    <Building2 className="w-4 h-4 text-muted-foreground" />
-                    Company Details
-                  </CardTitle>
-                  <Badge variant="outline" className={`text-[11px] ${tc.badgeClass}`}>{contact.tier}</Badge>
-                </div>
+                <CardTitle className="flex items-center gap-2 text-[14px]">
+                  <Building2 className="w-4 h-4 text-muted-foreground" />
+                  Company Details
+                </CardTitle>
               </CardHeader>
               <CardContent className="px-5 py-4 space-y-3">
                 <div>

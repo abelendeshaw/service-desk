@@ -8,6 +8,7 @@ import { CreateTicket } from "./pages/CreateTicket";
 import { Contacts } from "./pages/Contacts";
 import { ContactDetail } from "./pages/ContactDetail";
 import { Employees } from "./pages/Employees";
+import { UserManagement } from "./pages/UserManagement";
 import { EmployeeDetail } from "./pages/EmployeeDetail";
 import { EmployeeTeamManagement } from "./pages/EmployeeTeamManagement";
 import { KnowledgeBase } from "./pages/KnowledgeBase";
@@ -36,7 +37,8 @@ export const router = createBrowserRouter([
       { path: "tickets/new", Component: CreateTicket },
       { path: "contacts", Component: Contacts },
       { path: "contacts/:id", Component: ContactDetail },
-      { path: "employees", Component: Employees },
+      { path: "employees", Component: UserManagement },
+      { path: "employees-list", Component: Employees },
       { path: "employees/teams", Component: EmployeeTeamManagement },
       { path: "employees/:id", Component: EmployeeDetail },
       { path: "knowledge", Component: KnowledgeBase },

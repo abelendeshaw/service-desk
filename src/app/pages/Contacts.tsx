@@ -96,24 +96,17 @@ const contactsData = [
   },
 ];
 
-const tierConfig: Record<string, { badgeClass: string }> = {
-  Enterprise: { badgeClass: 'bg-violet-50 text-violet-700 border-violet-200' },
-  Premium:    { badgeClass: 'bg-amber-50 text-amber-700 border-amber-200' },
-  Standard:   { badgeClass: 'bg-slate-50 text-slate-600 border-slate-200' },
-};
-
 export function Contacts() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [tierFilter, setTierFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortField, setSortField] = useState<'name' | 'company' | 'tickets'>('company');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [selected, setSelected] = useState<string[]>([]);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
-  const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', company: '', role: 'Primary Contact', status: 'Active' });
-  const [companyForm, setCompanyForm] = useState({ name: '', description: '', tier: 'Enterprise', phone: '', website: '' });
+  const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', company: '', status: 'Active' });
+  const [companyForm, setCompanyForm] = useState({ name: '', description: '', phone: '', website: '' });
   const [savedContact, setSavedContact] = useState(false);
   const [savedCompany, setSavedCompany] = useState(false);
 
@@ -122,12 +115,12 @@ export function Contacts() {
 
   const handleSaveContact = () => {
     setSavedContact(true);
-    setTimeout(() => { setSavedContact(false); setShowContactModal(false); setContactForm({ name: '', email: '', phone: '', company: '', role: 'Primary Contact', status: 'Active' }); }, 1000);
+    setTimeout(() => { setSavedContact(false); setShowContactModal(false); setContactForm({ name: '', email: '', phone: '', company: '', status: 'Active' }); }, 1000);
   };
 
   const handleSaveCompany = () => {
     setSavedCompany(true);
-    setTimeout(() => { setSavedCompany(false); setShowCompanyModal(false); setCompanyForm({ name: '', description: '', tier: 'Enterprise', phone: '', website: '' }); }, 1000);
+    setTimeout(() => { setSavedCompany(false); setShowCompanyModal(false); setCompanyForm({ name: '', description: '', phone: '', website: '' }); }, 1000);
   };
 
   const toggleSort = (field: typeof sortField) => {
@@ -140,7 +133,6 @@ export function Contacts() {
   const filtered = contactsData
     .filter((c) => {
       if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.email.includes(search.toLowerCase()) && !c.company.toLowerCase().includes(search.toLowerCase())) return false;
-      if (tierFilter !== 'all' && c.tier !== tierFilter) return false;
       if (statusFilter !== 'all' && c.status !== statusFilter) return false;
       return true;
     })
@@ -151,7 +143,7 @@ export function Contacts() {
       return sortDir === 'asc' ? cmp : -cmp;
     });
 
-  const hasFilters = search || tierFilter !== 'all' || statusFilter !== 'all';
+  const hasFilters = search || statusFilter !== 'all';
 
   return (
     <div className="flex h-full flex-col bg-muted/30">
@@ -188,15 +180,6 @@ export function Contacts() {
             className="h-8 bg-muted pl-9 pr-3 text-[13px]"
           />
         </div>
-        <Select value={tierFilter} onValueChange={setTierFilter}>
-          <SelectTrigger className="h-8 w-[150px] text-[13px]"><SelectValue placeholder="All Tiers" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Tiers</SelectItem>
-            <SelectItem value="Enterprise">Enterprise</SelectItem>
-            <SelectItem value="Premium">Premium</SelectItem>
-            <SelectItem value="Standard">Standard</SelectItem>
-          </SelectContent>
-        </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="h-8 w-[140px] text-[13px]"><SelectValue placeholder="All Status" /></SelectTrigger>
           <SelectContent>
@@ -207,7 +190,7 @@ export function Contacts() {
         </Select>
         {hasFilters && (
           <Button variant="ghost" size="sm" className="h-8 text-[12px] text-muted-foreground"
-            onClick={() => { setSearch(''); setTierFilter('all'); setStatusFilter('all'); }}>
+            onClick={() => { setSearch(''); setStatusFilter('all'); }}>
             Clear
           </Button>
         )}
@@ -235,7 +218,6 @@ export function Contacts() {
                 </div>
               </TableHead>
               <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Email</TableHead>
-              <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tier</TableHead>
               <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
               <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <div className="flex cursor-pointer items-center gap-1 hover:text-foreground" onClick={() => toggleSort('tickets')}>
@@ -247,7 +229,6 @@ export function Contacts() {
           </TableHeader>
           <TableBody className="bg-background">
             {filtered.map((contact) => {
-              const tc = tierConfig[contact.tier];
               const isSelected = selected.includes(contact.email);
               return (
                 <TableRow
@@ -286,9 +267,6 @@ export function Contacts() {
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-3.5">
-                    <Badge variant="outline" className={`text-[11px] ${tc.badgeClass}`}>{contact.tier}</Badge>
-                  </TableCell>
-                  <TableCell className="px-4 py-3.5">
                     <div className={`flex items-center gap-1.5 text-[12px] font-medium ${contact.status === 'Active' ? 'text-emerald-600' : 'text-muted-foreground'}`}>
                       <div className={`h-1.5 w-1.5 rounded-full ${contact.status === 'Active' ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
                       {contact.status}
@@ -314,7 +292,7 @@ export function Contacts() {
             })}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="py-16 text-center">
+                <TableCell colSpan={7} className="py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <AlertCircle className="w-8 h-8 text-muted-foreground" />
                     <div>
@@ -377,29 +355,15 @@ export function Contacts() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="mb-1.5 block text-[12px]">Role</Label>
-                <Select value={contactForm.role} onValueChange={(v) => updateContact('role', v)}>
-                  <SelectTrigger className="h-9 text-[13px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Primary Contact">Primary Contact</SelectItem>
-                    <SelectItem value="Technical Contact">Technical Contact</SelectItem>
-                    <SelectItem value="Billing Contact">Billing Contact</SelectItem>
-                    <SelectItem value="Executive">Executive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="mb-1.5 block text-[12px]">Status</Label>
-                <Select value={contactForm.status} onValueChange={(v) => updateContact('status', v)}>
-                  <SelectTrigger className="h-9 text-[13px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label className="mb-1.5 block text-[12px]">Status</Label>
+              <Select value={contactForm.status} onValueChange={(v) => updateContact('status', v)}>
+                <SelectTrigger className="h-9 text-[13px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           {savedContact && (
@@ -440,22 +404,9 @@ export function Contacts() {
               <Label className="mb-1.5 block text-[12px]">Description</Label>
               <Input value={companyForm.description} onChange={(e) => updateCompany('description', e.target.value)} placeholder="Brief description" className="h-9 text-[13px]" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="mb-1.5 block text-[12px]">Tier</Label>
-                <Select value={companyForm.tier} onValueChange={(v) => updateCompany('tier', v)}>
-                  <SelectTrigger className="h-9 text-[13px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Enterprise">Enterprise</SelectItem>
-                    <SelectItem value="Premium">Premium</SelectItem>
-                    <SelectItem value="Standard">Standard</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="mb-1.5 block text-[12px]">Phone</Label>
-                <Input value={companyForm.phone} onChange={(e) => updateCompany('phone', e.target.value)} placeholder="+251 11 000 0000" className="h-9 text-[13px]" />
-              </div>
+            <div>
+              <Label className="mb-1.5 block text-[12px]">Phone</Label>
+              <Input value={companyForm.phone} onChange={(e) => updateCompany('phone', e.target.value)} placeholder="+251 11 000 0000" className="h-9 text-[13px]" />
             </div>
             <div>
               <Label className="mb-1.5 block text-[12px]">Website</Label>

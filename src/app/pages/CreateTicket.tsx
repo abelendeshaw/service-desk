@@ -15,7 +15,6 @@ export function CreateTicket() {
     support: '',
     team: '',
     fieldEngineerId: '',
-    assignmentAt: '',
     subject: '',
     type: '',
     deadline: '',
@@ -235,15 +234,7 @@ export function CreateTicket() {
                       ))}
                     </select>
                   </div>
-                  <div>
-                    <label className={labelClasses}>Assignation Timestamp</label>
-                    <input
-                      type="datetime-local"
-                      value={form.assignmentAt}
-                      onChange={e => update('assignmentAt', e.target.value)}
-                      className={fieldClasses}
-                    />
-                  </div>
+
                 </div>
               </div>
             )}
@@ -262,7 +253,6 @@ export function CreateTicket() {
                     { label: 'Deadline', value: form.deadline || '—' },
                     { label: 'Team', value: form.team || '—' },
                     { label: 'Field Engineer', value: selectedFieldEngineer?.name || '—' },
-                    { label: 'Assignation Time', value: form.assignmentAt || '—' },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex items-start gap-4 py-2.5 border-b border-[#f8f9fa]">
                       <div className="text-[12px] text-[#9ca3af] w-28 flex-shrink-0">{label}</div>
@@ -349,7 +339,7 @@ export function CreateTicket() {
                     },
                   ],
                   initialAssignmentEngineerId: form.fieldEngineerId || null,
-                  initialAssignmentAt: form.assignmentAt ? new Date(form.assignmentAt).toISOString() : null,
+                  initialAssignmentAt: null,
                 });
                 navigate(`/tickets/${id}`);
               }}

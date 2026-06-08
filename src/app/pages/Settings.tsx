@@ -20,7 +20,6 @@ import {
   Sun,
   Trash2,
   User,
-  Webhook,
 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
@@ -44,7 +43,6 @@ type Section =
   | "notifications"
   | "security"
   | "appearance"
-  | "integrations"
   | "data";
 
 type NotifType = "email" | "push";
@@ -52,9 +50,8 @@ type NotifType = "email" | "push";
 const navItems = [
   { key: "profile" as const, icon: User, label: "Profile", description: "Personal information" },
   { key: "notifications" as const, icon: Bell, label: "Notifications", description: "Email and alert preferences" },
-  { key: "security" as const, icon: Shield, label: "Security", description: "Password and 2FA" },
+  { key: "security" as const, icon: Shield, label: "Security", description: "Password" },
   { key: "appearance" as const, icon: Palette, label: "Appearance", description: "Theme and display" },
-  { key: "integrations" as const, icon: Webhook, label: "Integrations", description: "Third-party connections" },
   { key: "data" as const, icon: Database, label: "Data & Privacy", description: "Export and deletion" },
 ];
 
@@ -308,44 +305,7 @@ export function Settings() {
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardHeader className="flex-row items-center justify-between">
-                      <div>
-                        <CardTitle className="text-base">Two-Factor Authentication</CardTitle>
-                        <CardDescription>Add an extra layer of security to your account.</CardDescription>
-                      </div>
-                      <Button variant="secondary">Enable 2FA</Button>
-                    </CardHeader>
-                  </Card>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Active Sessions</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid gap-3">
-                      {[
-                        { device: "Chrome on MacOS", location: "Addis Ababa, ET", current: true, time: "Active now" },
-                        { device: "Firefox on Windows", location: "Addis Ababa, ET", current: false, time: "2 days ago" },
-                      ].map((session) => (
-                        <div key={session.device} className="flex items-center justify-between rounded-md border p-3">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium">{session.device}</p>
-                              {session.current ? <Badge variant="secondary">Current</Badge> : null}
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              {session.location} · {session.time}
-                            </p>
-                          </div>
-                          {!session.current ? (
-                            <Button variant="destructive" size="sm">
-                              Revoke
-                            </Button>
-                          ) : null}
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
                 </>
               )}
 
@@ -397,34 +357,6 @@ export function Settings() {
                 </>
               )}
 
-              {activeSection === "integrations" && (
-                <div className="grid gap-3">
-                  {[
-                    { name: "Slack", description: "Get ticket notifications in Slack channels", icon: "💬", connected: false },
-                    { name: "Email (SMTP)", description: "Configure outgoing email delivery", icon: "📧", connected: true },
-                    { name: "Webhook", description: "Send events to external endpoints", icon: "🔗", connected: false },
-                    { name: "SSO / SAML", description: "Single sign-on authentication", icon: "🔐", connected: false },
-                  ].map(({ name, description, icon, connected }) => (
-                    <Card key={name}>
-                      <CardContent className="flex items-center justify-between p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex size-10 items-center justify-center rounded-md bg-muted text-lg">{icon}</div>
-                          <div>
-                            <p className="font-semibold">{name}</p>
-                            <p className="text-sm text-muted-foreground">{description}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {connected ? <Badge variant="secondary">Connected</Badge> : null}
-                          <Button variant={connected ? "destructive" : "outline"}>
-                            {connected ? "Disconnect" : "Connect"}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
 
               {activeSection === "data" && (
                 <>
