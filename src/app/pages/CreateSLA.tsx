@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, FileText, Info } from 'lucide-react';
-import { toast } from 'sonner';
+import { AlertCircle, ArrowLeft, FileText, Info } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Alert, AlertDescription } from '../components/ui/alert';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
@@ -28,6 +28,7 @@ export function CreateSLA() {
     notes: '',
   });
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
 
   function set(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -43,11 +44,12 @@ export function CreateSLA() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.companyName.trim()) { toast.error('Company name is required'); return; }
-    if (!form.projectName.trim()) { toast.error('Project name is required'); return; }
-    if (!form.startDate) { toast.error('Start date is required'); return; }
-    if (!form.endDate) { toast.error('End date is required'); return; }
-    if (form.endDate < form.startDate) { toast.error('End date must be after start date'); return; }
+    setFormError('');
+    if (!form.companyName.trim()) { setFormError('Company name is required'); return; }
+    if (!form.projectName.trim()) { setFormError('Project name is required'); return; }
+    if (!form.startDate) { setFormError('Start date is required'); return; }
+    if (!form.endDate) { setFormError('End date is required'); return; }
+    if (form.endDate < form.startDate) { setFormError('End date must be after start date'); return; }
 
     setSubmitting(true);
     const id = createSLA({
@@ -186,6 +188,14 @@ export function CreateSLA() {
                 />
               </CardContent>
             </Card>
+
+            {/* Validation error */}
+            {formError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{formError}</AlertDescription>
+              </Alert>
+            )}
 
             {/* Actions */}
             <div className="flex items-center justify-between pt-1">

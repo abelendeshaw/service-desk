@@ -6,7 +6,8 @@ import {
 } from 'recharts';
 import {
   Ticket, CheckCircle2, Clock, AlertTriangle, TrendingUp,
-  TrendingDown, ChevronRight, Activity, Zap, RefreshCw
+  TrendingDown, ChevronRight, Activity, Zap, RefreshCw,
+  MonitorSmartphone, Wrench,
 } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -213,6 +214,40 @@ export function Dashboard() {
             <div className="text-[12px] text-muted-foreground">{kpi.label}</div>
           </Card>
         ))}
+      </div>
+
+      {/* Dashboard Views */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card
+          className="cursor-pointer transition-all hover:shadow-md"
+          onClick={() => navigate('/client-dashboard')}
+        >
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-violet-50">
+              <MonitorSmartphone className="w-5 h-5 text-violet-600" />
+            </div>
+            <div className="flex-1">
+              <div className="text-[14px] font-semibold">Client Portal</div>
+              <div className="text-[12px] text-muted-foreground">View from a client's perspective</div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </CardContent>
+        </Card>
+        <Card
+          className="cursor-pointer transition-all hover:shadow-md"
+          onClick={() => navigate('/engineer-dashboard')}
+        >
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-blue-50">
+              <Wrench className="w-5 h-5 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <div className="text-[14px] font-semibold">Engineer View</div>
+              <div className="text-[12px] text-muted-foreground">View from an engineer's perspective</div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </CardContent>
+        </Card>
       </div>
 
       {/* Charts Row */}

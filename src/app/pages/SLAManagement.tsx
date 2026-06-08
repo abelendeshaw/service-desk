@@ -2,14 +2,16 @@ import React, { useRef, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   FileText, Plus, Search, Upload, AlertTriangle,
-  CheckCircle2, Clock, XCircle, TrendingUp, Download,
+  CheckCircle2, Clock, XCircle, Download,
   Filter, ArrowUpDown, Calendar, FileUp,
+  Mail, Inbox, Star, StarOff, RefreshCw, Tag, Paperclip, AlertCircle, ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Alert, AlertDescription } from '../components/ui/alert';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '../components/ui/dialog';
@@ -22,8 +24,9 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Textarea } from '../components/ui/textarea';
+import { Checkbox } from '../components/ui/checkbox';
+import { Separator } from '../components/ui/separator';
 import { useServiceDesk } from '../store/serviceDeskStore';
 import type { SLA, SLAStatus } from '../store/types';
 
@@ -516,14 +519,16 @@ function EditSLADialog({ sla, onClose }: { sla: SLA; onClose: () => void }) {
     endDate: sla.endDate,
     notes: sla.notes,
   });
+  const [formError, setFormError] = useState('');
 
   function set(field: string, value: string) {
+    setFormError('');
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
   function handleSave() {
     if (!form.companyName || !form.projectName || !form.startDate || !form.endDate) {
-      toast.error('All fields are required');
+      setFormError('All fields are required');
       return;
     }
     updateSLA({ id: sla.id, ...form });
@@ -567,12 +572,286 @@ function EditSLADialog({ sla, onClose }: { sla: SLA; onClose: () => void }) {
             </div>
           )}
         </div>
+        {formError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{formError}</AlertDescription>
+          </Alert>
+        )}
         <DialogFooter>
           <Button variant="outline" size="sm" className="text-[13px]" onClick={onClose}>Cancel</Button>
           <Button size="sm" className="text-[13px]" onClick={handleSave}>Save changes</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Email Support tab (embedded inside SLA Management)
+// ---------------------------------------------------------------------------
+
+const emailData = [
+  {
+    id: 'EM-001', from: 'EPSS Client', fromEmail: 'epss@gmail.com', initials: 'EP', color: '#7c3aed',
+    subject: 'Urgent: FortiGate firewall dropping VPN sessions intermittently',
+    preview: 'We are experiencing frequent VPN session drops on our FortiGate firewall at the Addis Ababa data center. This is affecting...',
+    date: '10:32 AM', status: 'Open', priority: 'Critical', unread: true, starred: false, attachments: 1, tag: 'Network', agent: 'WW',
+  },
+  {
+    id: 'EM-002', from: 'IE Client', fromEmail: 'ie@gmail.com', initials: 'IE', color: '#0891b2',
+    subject: 'Request: New user account creation for 3 staff members',
+    preview: 'Good morning, we need to create new Active Directory accounts for 3 new staff joining next Monday. Please find the details attached.',
+    date: 'Yesterday', status: 'Pending', priority: 'Low', unread: false, starred: true, attachments: 0, tag: 'Access', agent: 'SS',
+  },
+  {
+    id: 'EM-003', from: 'MinT Client', fromEmail: 'mint@gmail.com', initials: 'MI', color: '#6b7280',
+    subject: 'Follow-up on network latency issue reported last week',
+    preview: 'We wanted to follow up on the network latency issue we reported last week. The problem persists during peak hours between 9AM and 12PM.',
+    date: 'Yesterday', status: 'Open', priority: 'High', unread: false, starred: false, attachments: 2, tag: 'Network', agent: 'DB',
+  },
+  {
+    id: 'EM-004', from: 'CSA Client', fromEmail: 'csa@gmail.com', initials: 'CS', color: '#0891b2',
+    subject: 'Monthly report request — Q1 2026 system uptime and incident summary',
+    preview: 'Please provide the monthly uptime and incident report for Q1 2026. The management team needs this by end of week for their review.',
+    date: 'Apr 12', status: 'Closed', priority: 'Medium', unread: false, starred: false, attachments: 0, tag: 'Reporting', agent: 'AT',
+  },
+  {
+    id: 'EM-005', from: 'ERA/MOTL Client', fromEmail: 'eramotl@gmail.com', initials: 'ER', color: '#059669',
+    subject: 'Infrastructure upgrade proposal — need technical review',
+    preview: 'We are planning to upgrade our server infrastructure and would like a technical review of our proposed setup before proceeding.',
+    date: 'Apr 11', status: 'Open', priority: 'Medium', unread: true, starred: false, attachments: 3, tag: 'Infrastructure', agent: null,
+  },
+  {
+    id: 'EM-006', from: 'MoWS Client', fromEmail: 'mows@gmail.com', initials: 'MW', color: '#d97706',
+    subject: 'CSAT Survey Response — Technical Support Feedback',
+    preview: 'Thank you for the recent support engagement. We have completed the CSAT survey and wanted to share our feedback directly as well.',
+    date: 'Apr 10', status: 'Closed', priority: 'Low', unread: false, starred: false, attachments: 0, tag: 'CSAT', agent: 'WW',
+  },
+  {
+    id: 'EM-007', from: 'Abay Bank Client', fromEmail: 'abaybank@gmail.com', initials: 'AB', color: '#dc2626',
+    subject: 'Critical: Core banking system cannot connect to backup server',
+    preview: 'URGENT — Our core banking application is failing to connect to the backup server since this morning. Transactions are being affected.',
+    date: 'Apr 9', status: 'Closed', priority: 'Critical', unread: false, starred: true, attachments: 1, tag: 'Critical', agent: 'SS',
+  },
+];
+
+const emailPriorityConfig: Record<string, { badgeClass: string }> = {
+  Critical: { badgeClass: 'bg-red-50 text-red-700 border-red-200' },
+  High:     { badgeClass: 'bg-orange-50 text-orange-700 border-orange-200' },
+  Medium:   { badgeClass: 'bg-amber-50 text-amber-700 border-amber-200' },
+  Low:      { badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+};
+
+const emailStatusCfg: Record<string, { badgeClass: string; dotClass: string }> = {
+  Open:    { badgeClass: 'bg-blue-50 text-blue-700 border-blue-200',      dotClass: 'bg-blue-500' },
+  Pending: { badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',   dotClass: 'bg-amber-500' },
+  Closed:  { badgeClass: 'bg-muted text-muted-foreground border-border',  dotClass: 'bg-muted-foreground' },
+};
+
+function EmailSupportTab() {
+  const navigate = useNavigate();
+  const [emailSearch, setEmailSearch] = useState('');
+  const [emailFolder, setEmailFolder] = useState<'All' | 'Open' | 'Pending' | 'Closed' | 'Starred'>('All');
+  const [emailPriorityFilter, setEmailPriorityFilter] = useState('all');
+  const [starred, setStarred] = useState<Record<string, boolean>>(
+    Object.fromEntries(emailData.map((e) => [e.id, e.starred]))
+  );
+
+  const folderCounts = {
+    All:     emailData.length,
+    Open:    emailData.filter((e) => e.status === 'Open').length,
+    Pending: emailData.filter((e) => e.status === 'Pending').length,
+    Closed:  emailData.filter((e) => e.status === 'Closed').length,
+    Starred: Object.values(starred).filter(Boolean).length,
+  };
+
+  const filtered = emailData.filter((e) => {
+    if (emailSearch &&
+      !e.subject.toLowerCase().includes(emailSearch.toLowerCase()) &&
+      !e.from.toLowerCase().includes(emailSearch.toLowerCase())) return false;
+    if (emailFolder === 'Starred' && !starred[e.id]) return false;
+    if (emailFolder !== 'All' && emailFolder !== 'Starred' && e.status !== emailFolder) return false;
+    if (emailPriorityFilter !== 'all' && e.priority !== emailPriorityFilter) return false;
+    return true;
+  });
+
+  const unreadCount = emailData.filter((e) => e.unread).length;
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Email stats + filters */}
+      <div className="border-b bg-background px-6 py-4 space-y-4">
+        <div className="grid grid-cols-4 gap-3">
+          {[
+            { label: 'Total Emails',   value: emailData.length,                              icon: Mail,         color: '#0b2235' },
+            { label: 'Unread',         value: unreadCount,                                   icon: Inbox,        color: '#2563eb' },
+            { label: 'Open',           value: emailData.filter((e) => e.status === 'Open').length, icon: AlertCircle, color: '#d97706' },
+            { label: 'Resolved Today', value: 4,                                             icon: CheckCircle2, color: '#059669' },
+          ].map((s) => (
+            <Card key={s.label} className="gap-0 px-4 py-3">
+              <CardContent className="flex items-center gap-3 p-0">
+                <div className="flex size-8 items-center justify-center rounded-md bg-muted">
+                  <s.icon className="w-4 h-4" style={{ color: s.color }} />
+                </div>
+                <div>
+                  <div className="text-[18px] font-semibold">{s.value}</div>
+                  <div className="text-[11px] text-muted-foreground">{s.label}</div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search emails..."
+              value={emailSearch}
+              onChange={(e) => setEmailSearch(e.target.value)}
+              className="h-8 bg-muted pl-9 pr-3 text-[13px]"
+            />
+          </div>
+          <Select value={emailPriorityFilter} onValueChange={setEmailPriorityFilter}>
+            <SelectTrigger className="h-8 w-[150px] text-[13px]"><SelectValue placeholder="All Priorities" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Priorities</SelectItem>
+              <SelectItem value="Critical">Critical</SelectItem>
+              <SelectItem value="High">High</SelectItem>
+              <SelectItem value="Medium">Medium</SelectItem>
+              <SelectItem value="Low">Low</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Inbox area */}
+      <div className="flex-1 overflow-hidden flex">
+        {/* Folder Sidebar */}
+        <div className="flex w-[180px] shrink-0 flex-col gap-0.5 border-r bg-background px-2 py-3">
+          <div className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Folders</div>
+          {(Object.keys(folderCounts) as Array<keyof typeof folderCounts>).map((f) => (
+            <Button
+              key={f}
+              onClick={() => setEmailFolder(f)}
+              variant={emailFolder === f ? 'secondary' : 'ghost'}
+              className="h-auto justify-between px-2 py-2 text-[13px] font-medium"
+            >
+              <div className="flex items-center gap-2">
+                {f === 'All'     && <Inbox        className="w-3.5 h-3.5" />}
+                {f === 'Open'    && <AlertCircle  className="w-3.5 h-3.5" />}
+                {f === 'Pending' && <Clock        className="w-3.5 h-3.5" />}
+                {f === 'Closed'  && <CheckCircle2 className="w-3.5 h-3.5" />}
+                {f === 'Starred' && <Star         className="w-3.5 h-3.5" />}
+                {f}
+              </div>
+              <span className={`rounded-full px-1.5 py-0.5 text-[11px] ${emailFolder === f ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                {folderCounts[f]}
+              </span>
+            </Button>
+          ))}
+          <div className="mt-4 border-t pt-3">
+            <div className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tags</div>
+            {['Network', 'Access', 'Infrastructure', 'CSAT', 'Critical'].map((tag) => (
+              <Button key={tag} variant="ghost" className="h-auto w-full justify-start gap-2 px-2 py-1.5 text-[12px]">
+                <Tag className="w-3 h-3" />
+                {tag}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Email List */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background px-4 py-2">
+            <Checkbox />
+            <Separator orientation="vertical" className="mx-1 h-4" />
+            <Button variant="ghost" size="sm" className="h-auto gap-1 p-0 text-[12px] text-muted-foreground">
+              <Filter className="w-3.5 h-3.5" />Filter
+            </Button>
+            <Button variant="ghost" size="sm" className="h-auto gap-1 p-0 text-[12px] text-muted-foreground">
+              <ArrowUpDown className="w-3.5 h-3.5" />Sort
+            </Button>
+            <span className="ml-auto text-[12px] text-muted-foreground">
+              {filtered.length} conversation{filtered.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="bg-background">
+            {filtered.map((email) => {
+              const pc = emailPriorityConfig[email.priority];
+              const sc = emailStatusCfg[email.status];
+              const isStarred = starred[email.id];
+              return (
+                <div
+                  key={email.id}
+                  className={`group flex cursor-pointer items-start gap-3 border-b px-4 py-3.5 transition-colors hover:bg-muted/50 ${email.unread ? 'bg-blue-50/40' : ''}`}
+                  onClick={() => navigate(`/email-support/${email.id}`)}
+                >
+                  <Checkbox className="mt-1 shrink-0" onClick={(e) => e.stopPropagation()} />
+                  <Button
+                    variant="ghost" size="icon" className="mt-0.5 size-6 shrink-0"
+                    onClick={(e) => { e.stopPropagation(); setStarred((prev) => ({ ...prev, [email.id]: !prev[email.id] })); }}
+                  >
+                    {isStarred
+                      ? <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      : <StarOff className="w-4 h-4 text-muted-foreground" />}
+                  </Button>
+                  <Avatar className="size-8">
+                    <AvatarFallback className="text-[11px] font-semibold text-white" style={{ backgroundColor: email.color }}>
+                      {email.initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-4 mb-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`truncate text-[13px] ${email.unread ? 'font-semibold' : 'font-medium'}`}>{email.from}</span>
+                        {email.unread && <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />}
+                      </div>
+                      <span className="text-[11px] text-muted-foreground flex-shrink-0">{email.date}</span>
+                    </div>
+                    <div className={`mb-1 truncate text-[13px] ${email.unread ? 'font-medium' : 'text-muted-foreground'}`}>{email.subject}</div>
+                    <div className="truncate text-[12px] text-muted-foreground">{email.preview}</div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">{email.id}</span>
+                      <Badge variant="outline" className={`gap-1 text-[11px] ${sc.badgeClass}`}>
+                        <span className={`size-1.5 rounded-full ${sc.dotClass}`} />{email.status}
+                      </Badge>
+                      <Badge variant="outline" className={`text-[11px] ${pc.badgeClass}`}>{email.priority}</Badge>
+                      <span className="rounded border bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">{email.tag}</span>
+                      {email.attachments > 0 && (
+                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <Paperclip className="w-3 h-3" />{email.attachments}
+                        </span>
+                      )}
+                      {email.agent && (
+                        <Avatar className="ml-auto size-5">
+                          <AvatarFallback className="text-[9px] font-semibold">{email.agent}</AvatarFallback>
+                        </Avatar>
+                      )}
+                    </div>
+                  </div>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <RowActionsMenu
+                      entityName={email.id}
+                      onView={() => navigate(`/email-support/${email.id}`)}
+                      onEdit={() => toast.info(`Edit draft for ${email.id} coming soon`)}
+                      onDelete={() => toast.success(`${email.id} deleted`)}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+            {filtered.length === 0 && (
+              <div className="py-20 text-center">
+                <Mail className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+                <div className="text-[14px] font-medium">No emails found</div>
+                <div className="mt-1 text-[13px] text-muted-foreground">Try adjusting your search or filters</div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -593,6 +872,7 @@ export function SLAManagement() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [importOpen, setImportOpen] = useState(false);
   const [editingSLA, setEditingSLA] = useState<SLA | null>(null);
+  const [activeTab, setActiveTab] = useState<'sla' | 'email'>('sla');
 
   const companies = useMemo(() => Array.from(new Set(slas.map((s) => s.companyName))).sort(), [slas]);
   const years = useMemo(() => {
@@ -629,14 +909,6 @@ export function SLAManagement() {
   }, [enriched, search, statusFilter, supportTypeFilter, companyFilter, yearFilter, sortField, sortDir]);
 
   const total = enriched.length;
-  const activeCount = enriched.filter((s) => s.status === 'Active').length;
-  const expiringSoonCount = enriched.filter((s) => s.status === 'Expiring Soon').length;
-  const expiredCount = enriched.filter((s) => s.status === 'Expired').length;
-  const upcomingCount = enriched.filter((s) => s.status === 'Upcoming').length;
-
-  const alertSLAs = enriched
-    .filter((s) => s.status === 'Expiring Soon' || s.status === 'Expired')
-    .sort((a, b) => a.endDate.localeCompare(b.endDate));
 
   const toggleSort = (field: typeof sortField) => {
     if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -649,432 +921,235 @@ export function SLAManagement() {
     <div className="flex h-full flex-col bg-muted/30">
       {/* Header */}
       <div className="border-b bg-background px-6 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-[20px] font-semibold tracking-tight">SLA Management</h1>
             <p className="mt-0.5 text-[13px] text-muted-foreground">
-              Service Level Agreements · {total} total · {activeCount} active
+              Service Level Agreements & Email Support
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5 text-[13px]" onClick={() => setImportOpen(true)}>
-              <Upload className="w-3.5 h-3.5" />
-              Import
-            </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 text-[13px]" onClick={() => exportSLAsToExcel(filtered)}>
-              <Download className="w-3.5 h-3.5" />
-              Export
-            </Button>
-            <Button size="sm" className="gap-1.5 text-[13px]" onClick={() => navigate('/sla/new')}>
-              <Plus className="w-3.5 h-3.5" />
-              New SLA
-            </Button>
-          </div>
-        </div>
-
-        {/* Stat cards */}
-        <div className="grid grid-cols-5 gap-3">
-          {[
-            { label: 'Total SLAs',     value: total,            icon: FileText,     color: '#0b2235' },
-            { label: 'Active',         value: activeCount,      icon: CheckCircle2, color: '#059669' },
-            { label: 'Expiring Soon',  value: expiringSoonCount,icon: AlertTriangle, color: '#d97706' },
-            { label: 'Expired',        value: expiredCount,     icon: XCircle,      color: '#dc2626' },
-            { label: 'Upcoming',       value: upcomingCount,    icon: Clock,        color: '#2563eb' },
-          ].map((s) => (
-            <Card key={s.label} className="gap-0 px-4 py-3">
-              <CardContent className="flex items-center gap-3 px-0 pb-0">
-                <div className="flex size-8 items-center justify-center rounded-md bg-muted">
-                  <s.icon className="w-4 h-4" style={{ color: s.color }} />
-                </div>
-                <div>
-                  <div className="text-[18px] font-semibold">{s.value}</div>
-                  <div className="text-[11px] text-muted-foreground">{s.label}</div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {activeTab === 'sla' ? (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="gap-1.5 text-[13px]" onClick={() => setImportOpen(true)}>
+                <Upload className="w-3.5 h-3.5" />Import
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1.5 text-[13px]" onClick={() => exportSLAsToExcel(filtered)}>
+                <Download className="w-3.5 h-3.5" />Export
+              </Button>
+              <Button size="sm" className="gap-1.5 text-[13px]" onClick={() => navigate('/sla/new')}>
+                <Plus className="w-3.5 h-3.5" />New SLA
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="gap-1.5 text-[13px]">
+                <RefreshCw className="w-3.5 h-3.5" />Refresh
+              </Button>
+              <Button size="sm" className="gap-1.5 text-[13px]" onClick={() => navigate('/email-support/new')}>
+                <Plus className="w-3.5 h-3.5" />Compose
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <Tabs defaultValue="directory">
-          <TabsList className="mb-4">
-            <TabsTrigger value="dashboard" className="text-[13px]">
-              <TrendingUp className="w-3.5 h-3.5 mr-1.5" />
-              Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="directory" className="text-[13px]">
-              <FileText className="w-3.5 h-3.5 mr-1.5" />
-              Directory
-            </TabsTrigger>
-          </TabsList>
+      {/* Tab bar */}
+      <div className="flex border-b bg-background px-6">
+        {(['sla', 'email'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setActiveTab(t)}
+            className={`flex items-center gap-1.5 mr-6 px-0 py-3 text-[13px] font-medium border-b-2 transition-colors ${
+              activeTab === t ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {t === 'sla' ? <><ShieldCheck className="w-3.5 h-3.5" /> SLA Directory</> : <><Mail className="w-3.5 h-3.5" /> Email Support</>}
+          </button>
+        ))}
+      </div>
 
-          {/* ── Dashboard Tab ── */}
-          <TabsContent value="dashboard" className="space-y-5 mt-0">
-            {alertSLAs.length > 0 && (
-              <Card className="gap-0 p-0">
-                <CardHeader className="border-b px-5 py-4">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-amber-500" />
-                    <CardTitle className="text-[14px]">Expiration Alerts</CardTitle>
-                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[11px]">
-                      {alertSLAs.length} requiring attention
-                    </Badge>
-                  </div>
-                  <CardDescription className="text-[12px]">
-                    SLAs expiring within {EXPIRING_THRESHOLD_DAYS} days or already expired
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-0 divide-y">
-                  {alertSLAs.map((s) => {
-                    const sc = slaStatusConfig[s.status];
-                    const StatusIcon = sc.icon;
-                    return (
-                      <div
-                        key={s.id}
-                        className="flex items-center gap-4 px-5 py-3.5 cursor-pointer hover:bg-muted/40 transition-colors"
-                        onClick={() => navigate(`/sla/${s.id}`)}
-                      >
-                        <Avatar className="size-9 rounded-lg">
-                          <AvatarFallback className="rounded-lg text-[11px] font-bold text-white" style={{ backgroundColor: avatarColor(s.companyName) }}>
-                            {initials2(s.companyName)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[13px] font-medium">{s.companyName}</div>
-                          <div className="text-[12px] text-muted-foreground truncate">{s.projectName}</div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <div className="text-[11px] text-muted-foreground">End Date</div>
-                            <div className="text-[12px] font-medium">{s.endDate}</div>
-                          </div>
-                          <div className="text-right min-w-[150px]">
-                            <div className="text-[11px] text-muted-foreground">Remaining</div>
-                            <div className={`text-[12px] font-medium ${s.status === 'Expired' ? 'text-red-600' : 'text-amber-600'}`}>
-                              {s.remaining}
-                            </div>
-                          </div>
-                          <Badge variant="outline" className={`gap-1.5 text-[11px] ${sc.badgeClass}`}>
-                            <StatusIcon className="w-3 h-3" />
-                            {s.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="gap-0 p-0">
-                <CardHeader className="border-b px-5 py-4">
-                  <CardTitle className="text-[14px]">SLA Status Breakdown</CardTitle>
-                  <CardDescription className="text-[12px]">{total} total agreements</CardDescription>
-                </CardHeader>
-                <CardContent className="px-5 py-4 space-y-3">
-                  {(Object.entries(slaStatusConfig) as [SLAStatus, typeof slaStatusConfig[SLAStatus]][]).map(([status, cfg]) => {
-                    const count = enriched.filter((s) => s.status === status).length;
-                    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-                    const StatusIcon = cfg.icon;
-                    return (
-                      <div key={status} className="flex items-center gap-3">
-                        <StatusIcon className="w-4 h-4 flex-shrink-0" style={{ color: cfg.color }} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[13px]">{status}</span>
-                            <span className="text-[12px] text-muted-foreground">{count} · {pct}%</span>
-                          </div>
-                          <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: cfg.color }} />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-
-              <Card className="gap-0 p-0">
-                <CardHeader className="border-b px-5 py-4">
-                  <CardTitle className="text-[14px]">SLAs by Company</CardTitle>
-                  <CardDescription className="text-[12px]">Distribution across {companies.length} companies</CardDescription>
-                </CardHeader>
-                <CardContent className="px-5 py-4 space-y-2.5">
-                  {companies.map((company) => {
-                    const companySLAs = enriched.filter((s) => s.companyName === company);
-                    const hasAlert = companySLAs.some((s) => s.status === 'Expiring Soon' || s.status === 'Expired');
-                    return (
-                      <div key={company} className="flex items-center gap-3">
-                        <Avatar className="size-7 rounded-md">
-                          <AvatarFallback className="rounded-md text-[10px] font-bold text-white" style={{ backgroundColor: avatarColor(company) }}>
-                            {initials2(company)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="flex-1 text-[13px]">{company}</span>
-                        {hasAlert && <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />}
-                        <div className="flex gap-1">
-                          {companySLAs.map((s) => (
-                            <span key={s.id} className={`size-2 rounded-full ${slaStatusConfig[s.status].dotClass}`} title={s.status} />
-                          ))}
-                        </div>
-                        <span className="text-[12px] text-muted-foreground w-4 text-right">{companySLAs.length}</span>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
+      {/* Content */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        {activeTab === 'sla' ? (
+          <>
+            {/* Filters */}
+            <div className="flex items-center gap-2 border-b bg-background px-6 py-3 flex-shrink-0 flex-wrap">
+              <div className="relative min-w-[180px] max-w-xs flex-1">
+                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search SLAs..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-8 bg-muted pl-9 pr-3 text-[13px]"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-8 w-[150px] text-[13px]"><SelectValue placeholder="All Status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Expiring Soon">Expiring Soon</SelectItem>
+                  <SelectItem value="Expired">Expired</SelectItem>
+                  <SelectItem value="Upcoming">Upcoming</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={supportTypeFilter} onValueChange={setSupportTypeFilter}>
+                <SelectTrigger className="h-8 w-[155px] text-[13px]"><SelectValue placeholder="All Support Types" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Support Types</SelectItem>
+                  <SelectItem value="Normal Support">Normal Support</SelectItem>
+                  <SelectItem value="CSAT">CSAT</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                <SelectTrigger className="h-8 w-[160px] text-[13px]"><SelectValue placeholder="All Companies" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Companies</SelectItem>
+                  {companies.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={yearFilter} onValueChange={setYearFilter}>
+                <SelectTrigger className="h-8 w-[120px] text-[13px]"><SelectValue placeholder="All Years" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
+                  {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {hasFilters && (
+                <Button variant="ghost" size="sm" className="h-8 text-[12px] text-muted-foreground"
+                  onClick={() => { setSearch(''); setStatusFilter('all'); setSupportTypeFilter('all'); setCompanyFilter('all'); setYearFilter('all'); }}>
+                  <Filter className="w-3 h-3 mr-1" />Clear
+                </Button>
+              )}
             </div>
 
-            <Card className="gap-0 p-0">
-              <CardHeader className="border-b px-5 py-4">
-                <CardTitle className="text-[14px]">SLA Timeline</CardTitle>
-                <CardDescription className="text-[12px]">All agreements sorted by end date</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0 divide-y">
-                {[...enriched].sort((a, b) => a.endDate.localeCompare(b.endDate)).map((s) => {
-                  const sc = slaStatusConfig[s.status];
-                  const start = new Date(s.startDate + 'T00:00:00');
-                  const end = new Date(s.endDate + 'T00:00:00');
-                  const totalDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86_400_000));
-                  const today = new Date(); today.setHours(0, 0, 0, 0);
-                  const elapsed = Math.max(0, Math.min(totalDays, Math.round((today.getTime() - start.getTime()) / 86_400_000)));
-                  const pct = Math.round((elapsed / totalDays) * 100);
-                  return (
-                    <div key={s.id} className="flex items-center gap-4 px-5 py-3.5 cursor-pointer hover:bg-muted/40 transition-colors" onClick={() => navigate(`/sla/${s.id}`)}>
-                      <Avatar className="size-8 rounded-md flex-shrink-0">
-                        <AvatarFallback className="rounded-md text-[10px] font-bold text-white" style={{ backgroundColor: avatarColor(s.companyName) }}>
-                          {initials2(s.companyName)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="w-36 flex-shrink-0">
-                        <div className="text-[13px] font-medium truncate">{s.companyName}</div>
-                        <div className="text-[11px] text-muted-foreground truncate">{s.projectName}</div>
+            {/* Table */}
+            <div className="flex-1 overflow-auto">
+              <Table>
+                <TableHeader className="sticky top-0 z-10 bg-background">
+                  <TableRow>
+                    <TableHead className="pl-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground w-[100px]">ID</TableHead>
+                    <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <div className="flex cursor-pointer items-center gap-1 hover:text-foreground" onClick={() => toggleSort('companyName')}>
+                        Company <ArrowUpDown className="w-3 h-3" />
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[11px] text-muted-foreground">{s.startDate}</span>
-                          <span className="text-[11px] text-muted-foreground">{s.endDate}</span>
-                        </div>
-                        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                          <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: sc.color }} />
-                        </div>
+                    </TableHead>
+                    <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Project</TableHead>
+                    <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <div className="flex cursor-pointer items-center gap-1 hover:text-foreground" onClick={() => toggleSort('startDate')}>
+                        Start Date <ArrowUpDown className="w-3 h-3" />
                       </div>
-                      <div className="w-40 text-right flex-shrink-0">
-                        <div className={`text-[12px] font-medium ${s.status === 'Expired' ? 'text-red-600' : s.status === 'Expiring Soon' ? 'text-amber-600' : 'text-muted-foreground'}`}>
-                          {s.remaining}
-                        </div>
+                    </TableHead>
+                    <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <div className="flex cursor-pointer items-center gap-1 hover:text-foreground" onClick={() => toggleSort('endDate')}>
+                        End Date <ArrowUpDown className="w-3 h-3" />
                       </div>
-                      <Badge variant="outline" className={`gap-1.5 text-[11px] flex-shrink-0 ${sc.badgeClass}`}>
-                        <span className={`size-1.5 rounded-full ${sc.dotClass}`} />
-                        {s.status}
-                      </Badge>
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ── Directory Tab ── */}
-          <TabsContent value="directory" className="mt-0">
-            <Card className="gap-0 overflow-hidden p-0">
-              <CardHeader className="border-b px-5 py-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <CardTitle className="text-[14px]">SLA Directory</CardTitle>
-                    <CardDescription className="text-[12px]">{filtered.length} of {total} agreements</CardDescription>
-                  </div>
-                  <Button variant="outline" size="sm" className="gap-1.5 text-[12px] h-7 px-2.5" onClick={() => exportSLAsToExcel(filtered)}>
-                    <Download className="w-3 h-3" />
-                    Export
-                  </Button>
-                </div>
-
-                {/* Filters */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <div className="relative min-w-[180px] max-w-xs flex-1">
-                    <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Search SLAs..."
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="h-8 bg-muted pl-9 pr-3 text-[13px]"
-                    />
-                  </div>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-8 w-[150px] text-[13px]"><SelectValue placeholder="All Status" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Expiring Soon">Expiring Soon</SelectItem>
-                      <SelectItem value="Expired">Expired</SelectItem>
-                      <SelectItem value="Upcoming">Upcoming</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={supportTypeFilter} onValueChange={setSupportTypeFilter}>
-                    <SelectTrigger className="h-8 w-[155px] text-[13px]"><SelectValue placeholder="All Support Types" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Support Types</SelectItem>
-                      <SelectItem value="Normal Support">Normal Support</SelectItem>
-                      <SelectItem value="CSAT">CSAT</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={companyFilter} onValueChange={setCompanyFilter}>
-                    <SelectTrigger className="h-8 w-[160px] text-[13px]"><SelectValue placeholder="All Companies" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Companies</SelectItem>
-                      {companies.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <Select value={yearFilter} onValueChange={setYearFilter}>
-                    <SelectTrigger className="h-8 w-[120px] text-[13px]"><SelectValue placeholder="All Years" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Years</SelectItem>
-                      {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  {hasFilters && (
-                    <Button variant="ghost" size="sm" className="h-8 text-[12px] text-muted-foreground"
-                      onClick={() => { setSearch(''); setStatusFilter('all'); setSupportTypeFilter('all'); setCompanyFilter('all'); setYearFilter('all'); }}>
-                      <Filter className="w-3 h-3 mr-1" />
-                      Clear
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader className="sticky top-0 z-10 bg-background">
-                    <TableRow>
-                      <TableHead className="pl-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground w-[100px]">ID</TableHead>
-                      <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        <div className="flex cursor-pointer items-center gap-1 hover:text-foreground" onClick={() => toggleSort('companyName')}>
-                          Company <ArrowUpDown className="w-3 h-3" />
-                        </div>
-                      </TableHead>
-                      <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Project</TableHead>
-                      <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        <div className="flex cursor-pointer items-center gap-1 hover:text-foreground" onClick={() => toggleSort('startDate')}>
-                          Start Date <ArrowUpDown className="w-3 h-3" />
-                        </div>
-                      </TableHead>
-                      <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        <div className="flex cursor-pointer items-center gap-1 hover:text-foreground" onClick={() => toggleSort('endDate')}>
-                          End Date <ArrowUpDown className="w-3 h-3" />
-                        </div>
-                      </TableHead>
-                      <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Duration</TableHead>
-                      <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Remaining</TableHead>
-                      <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
-                      <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Support Type</TableHead>
-                      <TableHead className="px-4 py-3 w-10" />
-                    </TableRow>
-                  </TableHeader>
-
-                  <TableBody className="bg-background">
-                    {filtered.map((s) => {
-                      const sc = slaStatusConfig[s.status];
-                      const stc = supportTypeConfig[s.supportType];
-                      const duration = calcDurationLabel(s.startDate, s.endDate);
-                      const isExpiring = s.status === 'Expiring Soon';
-                      const isExpired = s.status === 'Expired';
-                      return (
-                        <TableRow key={s.id} className="group cursor-pointer" onClick={() => navigate(`/sla/${s.id}`)}>
-                          <TableCell className="pl-5 py-3.5">
-                            <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">{s.id}</span>
-                          </TableCell>
-                          <TableCell className="px-4 py-3.5">
-                            <div className="flex items-center gap-2.5">
-                              <Avatar className="size-7 rounded-md">
-                                <AvatarFallback className="rounded-md text-[10px] font-bold text-white" style={{ backgroundColor: avatarColor(s.companyName) }}>
-                                  {initials2(s.companyName)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-[13px] font-medium">{s.companyName}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-4 py-3.5">
-                            <span className="text-[13px]">{s.projectName}</span>
-                          </TableCell>
-                          <TableCell className="px-4 py-3.5">
-                            <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
-                              <Calendar className="w-3 h-3" />{s.startDate}
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-4 py-3.5">
-                            <div className={`flex items-center gap-1.5 text-[12px] ${isExpired ? 'text-red-600' : isExpiring ? 'text-amber-600' : 'text-muted-foreground'}`}>
-                              <Calendar className="w-3 h-3" />{s.endDate}
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-4 py-3.5">
-                            <span className="text-[12px] text-muted-foreground">{duration}</span>
-                          </TableCell>
-                          <TableCell className="px-4 py-3.5">
-                            <span className={`text-[12px] font-medium ${isExpired ? 'text-red-600' : isExpiring ? 'text-amber-600' : 'text-muted-foreground'}`}>
-                              {s.remaining}
-                            </span>
-                          </TableCell>
-                          <TableCell className="px-4 py-3.5">
-                            <Badge variant="outline" className={`gap-1.5 text-[11px] ${sc.badgeClass}`}>
-                              <span className={`size-1.5 rounded-full ${sc.dotClass}`} />
-                              {s.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="px-4 py-3.5">
-                            <Badge variant="outline" className={`gap-1.5 text-[11px] ${stc.badgeClass}`}>
-                              <span className={`size-1.5 rounded-full ${stc.dotClass}`} />
-                              {s.supportType}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                            <RowActionsMenu
-                              entityName={s.id}
-                              onView={() => navigate(`/sla/${s.id}`)}
-                              onEdit={() => setEditingSLA(s)}
-                              onDelete={() => deleteSLA(s.id)}
-                            />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-
-                    {filtered.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={10} className="py-16 text-center">
-                          <div className="flex flex-col items-center gap-3">
-                            <FileText className="w-8 h-8 text-muted-foreground" />
-                            <div>
-                              <div className="text-[14px] font-medium">No SLAs found</div>
-                              <div className="mt-1 text-[13px] text-muted-foreground">Try adjusting your search or filters</div>
-                            </div>
-                            {hasFilters && (
-                              <Button variant="outline" size="sm" className="text-[13px]"
-                                onClick={() => { setSearch(''); setStatusFilter('all'); setSupportTypeFilter('all'); setCompanyFilter('all'); setYearFilter('all'); }}>
-                                Clear filters
-                              </Button>
-                            )}
+                    </TableHead>
+                    <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Duration</TableHead>
+                    <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Remaining</TableHead>
+                    <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
+                    <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Support Type</TableHead>
+                    <TableHead className="px-4 py-3 w-10" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="bg-background">
+                  {filtered.map((s) => {
+                    const sc = slaStatusConfig[s.status];
+                    const stc = supportTypeConfig[s.supportType];
+                    const duration = calcDurationLabel(s.startDate, s.endDate);
+                    const isExpiring = s.status === 'Expiring Soon';
+                    const isExpired = s.status === 'Expired';
+                    return (
+                      <TableRow key={s.id} className="group cursor-pointer" onClick={() => navigate(`/sla/${s.id}`)}>
+                        <TableCell className="pl-5 py-3.5">
+                          <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">{s.id}</span>
+                        </TableCell>
+                        <TableCell className="px-4 py-3.5">
+                          <div className="flex items-center gap-2.5">
+                            <Avatar className="size-7 rounded-md">
+                              <AvatarFallback className="rounded-md text-[10px] font-bold text-white" style={{ backgroundColor: avatarColor(s.companyName) }}>
+                                {initials2(s.companyName)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-[13px] font-medium">{s.companyName}</span>
                           </div>
                         </TableCell>
+                        <TableCell className="px-4 py-3.5">
+                          <span className="text-[13px]">{s.projectName}</span>
+                        </TableCell>
+                        <TableCell className="px-4 py-3.5">
+                          <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+                            <Calendar className="w-3 h-3" />{s.startDate}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-4 py-3.5">
+                          <div className={`flex items-center gap-1.5 text-[12px] ${isExpired ? 'text-red-600' : isExpiring ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                            <Calendar className="w-3 h-3" />{s.endDate}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-4 py-3.5">
+                          <span className="text-[12px] text-muted-foreground">{duration}</span>
+                        </TableCell>
+                        <TableCell className="px-4 py-3.5">
+                          <span className={`text-[12px] font-medium ${isExpired ? 'text-red-600' : isExpiring ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                            {s.remaining}
+                          </span>
+                        </TableCell>
+                        <TableCell className="px-4 py-3.5">
+                          <Badge variant="outline" className={`gap-1.5 text-[11px] ${sc.badgeClass}`}>
+                            <span className={`size-1.5 rounded-full ${sc.dotClass}`} />{s.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="px-4 py-3.5">
+                          <Badge variant="outline" className={`gap-1.5 text-[11px] ${stc.badgeClass}`}>
+                            <span className={`size-1.5 rounded-full ${stc.dotClass}`} />{s.supportType}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                          <RowActionsMenu
+                            entityName={s.id}
+                            onView={() => navigate(`/sla/${s.id}`)}
+                            onEdit={() => setEditingSLA(s)}
+                            onDelete={() => deleteSLA(s.id)}
+                          />
+                        </TableCell>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
+                    );
+                  })}
+                  {filtered.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={10} className="py-16 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <FileText className="w-8 h-8 text-muted-foreground" />
+                          <div>
+                            <div className="text-[14px] font-medium">No SLAs found</div>
+                            <div className="mt-1 text-[13px] text-muted-foreground">Try adjusting your search or filters</div>
+                          </div>
+                          {hasFilters && (
+                            <Button variant="outline" size="sm" className="text-[13px]"
+                              onClick={() => { setSearch(''); setStatusFilter('all'); setSupportTypeFilter('all'); setCompanyFilter('all'); setYearFilter('all'); }}>
+                              Clear filters
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
 
-              <div className="flex items-center justify-between border-t bg-background px-5 py-3">
-                <span className="text-[12px] text-muted-foreground">Showing {filtered.length} of {total} SLAs</span>
-                <Button variant="outline" size="sm" className="gap-1.5 text-[12px] h-7 px-2.5" onClick={() => exportSLAsToExcel(filtered)}>
-                  <Download className="w-3 h-3" />
-                  Export all
-                </Button>
-              </div>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            {/* Footer */}
+            <div className="flex shrink-0 items-center justify-between border-t bg-background px-6 py-3">
+              <span className="text-[12px] text-muted-foreground">Showing {filtered.length} of {total} SLAs</span>
+              <Button variant="outline" size="sm" className="gap-1.5 text-[12px] h-7 px-2.5" onClick={() => exportSLAsToExcel(filtered)}>
+                <Download className="w-3 h-3" />Export all
+              </Button>
+            </div>
+          </>
+        ) : (
+          <EmailSupportTab />
+        )}
       </div>
 
       <ImportDialog open={importOpen} onClose={() => setImportOpen(false)} />

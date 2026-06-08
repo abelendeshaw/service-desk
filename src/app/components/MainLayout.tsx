@@ -5,10 +5,8 @@ import {
   LayoutDashboard,
   Ticket,
   Users,
-  Building2,
   UserCircle,
   BookOpen,
-  LifeBuoy,
   Settings as SettingsIcon,
   PanelLeftClose,
   PanelLeftOpen,
@@ -20,8 +18,6 @@ import {
   HelpCircle,
   Mail,
   BarChart2,
-  MonitorSmartphone,
-  Wrench,
   ShieldCheck,
 } from "lucide-react";
 import {
@@ -50,32 +46,13 @@ const navGroups = [
     label: "Overview",
     items: [
       { name: "Dashboard", href: "/", icon: LayoutDashboard, exact: true },
-      {
-        name: "Client Portal",
-        href: "/client-dashboard",
-        icon: MonitorSmartphone,
-        exact: false,
-      },
-      {
-        name: "Engineer View",
-        href: "/engineer-dashboard",
-        icon: Wrench,
-        exact: false,
-      },
     ],
   },
   {
     label: "Helpdesk",
     items: [
       { name: "Tickets", href: "/tickets", icon: Ticket, exact: false },
-      { name: "Support", href: "/support", icon: LifeBuoy, exact: false },
       { name: "SLA Management", href: "/sla", icon: ShieldCheck, exact: false },
-      {
-        name: "Email Support",
-        href: "/email-support",
-        icon: Mail,
-        exact: false,
-      },
       {
         name: "Knowledge Base",
         href: "/knowledge",
@@ -89,8 +66,6 @@ const navGroups = [
     label: "Directory",
     items: [
       { name: "Contacts", href: "/contacts", icon: Users, exact: false },
-      { name: "Companies", href: "/companies", icon: Building2, exact: false },
-      { name: "Employees", href: "/employees", icon: UserCircle, exact: false },
     ],
   },
 ];
@@ -189,6 +164,30 @@ export function MainLayout() {
         {/* Bottom */}
         <div className="border-sidebar-border flex-shrink-0 border-t p-2">
           <NavLink
+            to="/employees"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-2 py-2 rounded-md transition-all group relative ${
+                isActive
+                  ? "bg-white text-primary dark:bg-sidebar-muted dark:text-sidebar-foreground"
+                  : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+              } ${sidebarCollapsed ? "justify-center" : ""}`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                {isActive && !sidebarCollapsed && (
+                  <div className="bg-sidebar-accent absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full" />
+                )}
+                <UserCircle
+                  className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-primary dark:text-sidebar-foreground" : ""}`}
+                />
+                {!sidebarCollapsed && (
+                  <span className="text-[13px] font-medium">User Management</span>
+                )}
+              </>
+            )}
+          </NavLink>
+          <NavLink
             to="/settings"
             className={({ isActive }) =>
               `flex items-center gap-3 px-2 py-2 rounded-md transition-all group relative ${
@@ -210,33 +209,6 @@ export function MainLayout() {
               </>
             )}
           </NavLink>
-
-          {/* User */}
-          {!sidebarCollapsed && (
-            <div className="mt-1 px-2 py-2">
-              <div className="flex items-center gap-2.5">
-                <div className="bg-secondary text-secondary-foreground flex size-7 items-center justify-center rounded-full text-xs font-semibold flex-shrink-0">
-                  AT
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-white text-xs font-medium truncate">
-                    Abraham Tayu
-                  </div>
-                  <div className="text-sidebar-foreground/60 text-[11px] truncate">
-                    Admin
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-7 text-sidebar-foreground/60 hover:text-sidebar-foreground"
-                  onClick={() => setLogoutOpen(true)}
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            </div>
-          )}
 
           <Button
             variant="ghost"
@@ -287,13 +259,6 @@ export function MainLayout() {
                   New Ticket
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onSelect={() => navigate("/support/new")}
-                  className="text-[13px]"
-                >
-                  <LifeBuoy className="w-3.5 h-3.5 mr-2" />
-                  New Support
-                </DropdownMenuItem>
-                <DropdownMenuItem
                   onSelect={() => navigate("/email-support/new")}
                   className="text-[13px]"
                 >
@@ -307,13 +272,6 @@ export function MainLayout() {
                 >
                   <Users className="w-3.5 h-3.5 mr-2" />
                   New Contact
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => navigate("/companies")}
-                  className="text-[13px]"
-                >
-                  <Building2 className="w-3.5 h-3.5 mr-2" />
-                  New Company
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

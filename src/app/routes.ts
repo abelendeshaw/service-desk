@@ -7,21 +7,15 @@ import { TicketDetail } from "./pages/TicketDetail";
 import { CreateTicket } from "./pages/CreateTicket";
 import { Contacts } from "./pages/Contacts";
 import { ContactDetail } from "./pages/ContactDetail";
-import { Companies } from "./pages/Companies";
-import { CompanyDetail } from "./pages/CompanyDetail";
 import { Employees } from "./pages/Employees";
 import { EmployeeDetail } from "./pages/EmployeeDetail";
 import { EmployeeTeamManagement } from "./pages/EmployeeTeamManagement";
 import { KnowledgeBase } from "./pages/KnowledgeBase";
 import { ArticleDetail } from "./pages/ArticleDetail";
 import { CreateArticle } from "./pages/CreateArticle";
-import { Support } from "./pages/Support";
-import { SupportDetail } from "./pages/SupportDetail";
-import { CreateSupport } from "./pages/CreateSupport";
 import { SLAManagement } from "./pages/SLAManagement";
 import { CreateSLA } from "./pages/CreateSLA";
 import { SLADetail } from "./pages/SLADetail";
-import { EmailSupport } from "./pages/EmailSupport";
 import { EmailSupportDetail } from "./pages/EmailSupportDetail";
 import { CreateEmailSupport } from "./pages/CreateEmailSupport";
 import { Settings } from "./pages/Settings";
@@ -42,8 +36,6 @@ export const router = createBrowserRouter([
       { path: "tickets/new", Component: CreateTicket },
       { path: "contacts", Component: Contacts },
       { path: "contacts/:id", Component: ContactDetail },
-      { path: "companies", Component: Companies },
-      { path: "companies/:id", Component: CompanyDetail },
       { path: "employees", Component: Employees },
       { path: "employees/teams", Component: EmployeeTeamManagement },
       { path: "employees/:id", Component: EmployeeDetail },
@@ -51,13 +43,9 @@ export const router = createBrowserRouter([
       { path: "knowledge/project/:project", Component: KnowledgeBase },
       { path: "knowledge/ticket/:ticketId", Component: ArticleDetail },
       { path: "knowledge/edit/:ticketId", Component: CreateArticle },
-      { path: "support", Component: Support },
-      { path: "support/new", Component: CreateSupport },
-      { path: "support/:id", Component: SupportDetail },
       { path: "sla", Component: SLAManagement },
       { path: "sla/new", Component: CreateSLA },
       { path: "sla/:id", Component: SLADetail },
-      { path: "email-support", Component: EmailSupport },
       { path: "email-support/new", Component: CreateEmailSupport },
       { path: "email-support/:id", Component: EmailSupportDetail },
       { path: "reports", Component: Reports },

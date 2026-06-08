@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { Search, BookOpen, Folder, Grid3X3, List, FileText } from 'lucide-react';
+import { Search, Folder, Grid3X3, List, AlertCircle, FileSearch } from 'lucide-react';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -25,6 +26,7 @@ export function KnowledgeBase() {
   );
 
   const activeProject = project ?? null;
+  const projectNotFound = activeProject !== null && projects.length > 0 && !projects.includes(activeProject);
 
   const projectTickets = useMemo(() => {
     const pool = activeProject ? tickets.filter((t) => t.project === activeProject) : tickets;
@@ -39,18 +41,11 @@ export function KnowledgeBase() {
     });
   }, [activeProject, search, tickets]);
 
-  const stats = [
-    { label: 'Projects', value: projects.length, icon: Folder, color: '#0b2235' },
-    { label: 'Tickets', value: activeProject ? projectTickets.length : tickets.length, icon: FileText, color: '#2563eb' },
-    { label: 'Articles', value: Object.keys(ticketArticles).length, icon: BookOpen, color: '#059669' },
-    { label: 'View', value: activeProject ? activeProject : 'All', icon: Grid3X3, color: '#d97706' },
-  ];
-
   return (
     <div className="flex h-full flex-col bg-muted/30">
       {/* Header */}
-      <div className="border-b bg-background px-6 py-4">
-        <div className="flex items-center justify-between mb-5">
+      <div className="border-b bg-background px-6 py-4 flex-shrink-0">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-[20px] font-semibold tracking-tight">Knowledge Base</h1>
             <p className="mt-0.5 text-[13px] text-muted-foreground">Projects → Tickets → Articles</p>
@@ -62,67 +57,50 @@ export function KnowledgeBase() {
             </Button>
           </div>
         </div>
+      </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-4 gap-3 mb-4">
-          {stats.map((s) => (
-            <Card key={s.label} className="gap-0 px-4 py-3">
-              <CardContent className="flex items-center gap-3 p-0">
-              <div className="flex size-8 items-center justify-center rounded-md bg-muted">
-                <s.icon className="w-4 h-4" style={{ color: s.color }} />
-              </div>
-              <div>
-                <div className="text-[18px] font-semibold">{s.value}</div>
-                <div className="text-[11px] text-muted-foreground">{s.label}</div>
-              </div>
-              </CardContent>
-            </Card>
-          ))}
+      {/* Filters */}
+      <div className="flex items-center gap-3 border-b bg-background px-6 py-3 flex-shrink-0">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder={activeProject ? "Search tickets in project..." : "Search all ticket articles..."}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="h-8 bg-muted pl-9 pr-3 text-[13px]"
+          />
         </div>
+        <Select value={activeProject ?? "all"} onValueChange={(v) => navigate(v === "all" ? "/knowledge" : `/knowledge/project/${v}`)}>
+          <SelectTrigger className="h-8 w-[180px] text-[13px]">
+            <SelectValue placeholder="All Projects" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Projects</SelectItem>
+            {projects.map((p) => (
+              <SelectItem key={p} value={p}>
+                {p}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        {/* Filters */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder={activeProject ? "Search tickets in project..." : "Search all ticket articles..."}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="h-8 bg-muted pl-9 pr-3 text-[13px]"
-            />
-          </div>
-          <Select value={activeProject ?? "all"} onValueChange={(v) => navigate(v === "all" ? "/knowledge" : `/knowledge/project/${v}`)}>
-            <SelectTrigger className="h-8 w-[180px] text-[13px]">
-              <SelectValue placeholder="All Projects" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Projects</SelectItem>
-              {projects.map((p) => (
-                <SelectItem key={p} value={p}>
-                  {p}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div className="ml-auto flex items-center gap-1 rounded-md border bg-muted p-0.5">
-            <Button
-              onClick={() => setViewMode('list')}
-              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-              size="icon"
-              className="size-7"
-            >
-              <List className="w-3.5 h-3.5" />
-            </Button>
-            <Button
-              onClick={() => setViewMode('grid')}
-              variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-              size="icon"
-              className="size-7"
-            >
-              <Grid3X3 className="w-3.5 h-3.5" />
-            </Button>
-          </div>
+        <div className="ml-auto flex items-center gap-1 rounded-md border bg-muted p-0.5">
+          <Button
+            onClick={() => setViewMode('list')}
+            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+            size="icon"
+            className="size-7"
+          >
+            <List className="w-3.5 h-3.5" />
+          </Button>
+          <Button
+            onClick={() => setViewMode('grid')}
+            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+            size="icon"
+            className="size-7"
+          >
+            <Grid3X3 className="w-3.5 h-3.5" />
+          </Button>
         </div>
       </div>
 
@@ -160,7 +138,21 @@ export function KnowledgeBase() {
 
           {/* Tickets */}
           <div className="flex-1 min-w-0">
-            {viewMode === 'list' ? (
+            {projectNotFound ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Project not found</AlertTitle>
+                <AlertDescription>
+                  The project <span className="font-semibold">"{activeProject}"</span> doesn't exist or has been removed.{' '}
+                  <button
+                    className="underline hover:no-underline"
+                    onClick={() => navigate('/knowledge')}
+                  >
+                    View all projects
+                  </button>
+                </AlertDescription>
+              </Alert>
+            ) : viewMode === 'list' ? (
               <Card className="overflow-hidden p-0">
                 <Table>
                   <TableHeader>
@@ -173,6 +165,21 @@ export function KnowledgeBase() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
+                    {projectTickets.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="py-16 text-center">
+                          <div className="flex flex-col items-center gap-3">
+                            <FileSearch className="w-8 h-8 text-muted-foreground" />
+                            <div>
+                              <div className="text-[14px] font-medium">No articles found</div>
+                              <div className="mt-1 text-[13px] text-muted-foreground">
+                                {search ? 'Try a different search term' : 'No tickets in this project yet'}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                     {projectTickets.map((t, idx) => {
                       const article = ticketArticles[t.id] ?? getOrCreateTicketArticle({ ticketId: t.id });
                       return (
@@ -224,6 +231,17 @@ export function KnowledgeBase() {
               </Card>
             ) : (
               <div className="grid grid-cols-3 gap-4">
+                {projectTickets.length === 0 && (
+                  <div className="col-span-3 py-16 flex flex-col items-center gap-3 text-center">
+                    <FileSearch className="w-8 h-8 text-muted-foreground" />
+                    <div>
+                      <div className="text-[14px] font-medium">No articles found</div>
+                      <div className="mt-1 text-[13px] text-muted-foreground">
+                        {search ? 'Try a different search term' : 'No tickets in this project yet'}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {projectTickets.map((t, idx) => {
                   const article = ticketArticles[t.id] ?? getOrCreateTicketArticle({ ticketId: t.id });
                   return (

@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { AlertCircle, ArrowUpDown, CheckCircle2, Mail, Phone, Plus, Search, Shield, UserCircle, Users } from 'lucide-react';
+import { AlertCircle, ArrowUpDown, CheckCircle2, Mail, Phone, Plus, Search, UserCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { Alert, AlertDescription } from '../components/ui/alert';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import { Card, CardContent } from '../components/ui/card';
 import { Checkbox } from '../components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
@@ -69,78 +69,55 @@ export function Employees() {
 
   const roles = [...new Set(employees.map((employee) => employee.role))];
 
-  const stats = [
-    { label: 'Total Employees', value: employees.length, icon: UserCircle },
-    { label: 'Active', value: employees.filter((employee) => employee.status === 'Active').length, icon: Users },
-    { label: 'Roles', value: roles.length, icon: Shield },
-    { label: 'Teams', value: 5, icon: Users },
-  ];
-
   return (
     <div className="flex h-full flex-col bg-muted/30">
-      <div className="border-b bg-background px-6 py-4">
-        <div className="mb-5 flex items-center justify-between">
+      <div className="border-b bg-background px-6 py-4 flex-shrink-0">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[20px] font-semibold tracking-tight">Employees</h1>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">Team directory and role management</p>
+            <h1 className="text-[20px] font-semibold tracking-tight">User Management</h1>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">Team directory and role management · {employees.length} members</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate('/employees/teams')}>
               Team Management
             </Button>
             <Button size="sm" className="gap-1.5 text-[13px]" onClick={() => setShowModal(true)}>
-              <Plus data-icon="inline-start" />
+              <Plus className="w-3.5 h-3.5" />
               New Employee
             </Button>
           </div>
         </div>
+      </div>
 
-        <div className="mb-4 grid grid-cols-4 gap-3">
-          {stats.map((stat) => (
-            <Card key={stat.label}>
-              <CardContent className="flex items-center gap-3 p-4">
-                <div className="flex size-8 items-center justify-center rounded-md bg-muted">
-                  <stat.icon className="size-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-lg font-semibold">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      <div className="flex items-center gap-3 border-b bg-background px-6 py-3 flex-shrink-0">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by name or email..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="h-8 bg-muted pl-9 pr-3 text-[13px]"
+          />
         </div>
-
-        <div className="flex items-center gap-3">
-          <div className="relative max-w-sm flex-1">
-            <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search by name or email..."
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="h-8 bg-muted pl-9 pr-3 text-[13px]"
-            />
-          </div>
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="h-8 w-[180px] text-[13px]">
-              <SelectValue placeholder="All Roles" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              {roles.map((role) => <SelectItem key={role} value={role}>{role}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-8 w-[150px] text-[13px]">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="Active">Active</SelectItem>
-              <SelectItem value="Inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="h-8 w-[180px] text-[13px]">
+            <SelectValue placeholder="All Roles" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            {roles.map((role) => <SelectItem key={role} value={role}>{role}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-8 w-[150px] text-[13px]">
+            <SelectValue placeholder="All Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="Active">Active</SelectItem>
+            <SelectItem value="Inactive">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex-1 overflow-auto">
@@ -323,15 +300,16 @@ export function Employees() {
               </div>
             </div>
           </div>
+          {saved && (
+            <Alert className="border-primary bg-primary text-primary-foreground [&>svg]:text-primary-foreground">
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertDescription>Employee added successfully</AlertDescription>
+            </Alert>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
             <Button onClick={handleSave} disabled={!modalForm.name || !modalForm.email}>
-              {saved ? (
-                <>
-                  <CheckCircle2 data-icon="inline-start" />
-                  Saved!
-                </>
-              ) : 'Add Employee'}
+              Add Employee
             </Button>
           </DialogFooter>
         </DialogContent>

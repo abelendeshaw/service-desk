@@ -3,9 +3,10 @@ import { useNavigate, useParams } from 'react-router';
 import {
   ArrowLeft, Eye, Calendar, User, Pencil, Tag,
   MessageSquare, Share2, Printer,
-  ChevronRight, Clock, BookOpen, Trash2, Copy, ExternalLink
+  ChevronRight, Clock, BookOpen, Trash2, Copy, ExternalLink, AlertCircle,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -210,14 +211,21 @@ export function ArticleDetail() {
       <div className="flex-1 overflow-y-auto">
         {!ticket || !data ? (
           <div className="p-6">
-            <Card className="mx-auto max-w-3xl">
-              <CardHeader>
-                <CardTitle className="text-[14px]">Article not found</CardTitle>
-              </CardHeader>
-              <CardContent className="text-[13px] text-muted-foreground">
-                This ticket or its knowledge article could not be loaded.
-              </CardContent>
-            </Card>
+            <div className="mx-auto max-w-3xl space-y-4">
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Article not found</AlertTitle>
+                <AlertDescription>
+                  Ticket <span className="font-semibold">#{ticketId}</span> doesn't exist or its knowledge article could not be loaded.{' '}
+                  <button
+                    className="underline hover:no-underline font-medium"
+                    onClick={() => navigate('/knowledge')}
+                  >
+                    Go back to Knowledge Base
+                  </button>
+                </AlertDescription>
+              </Alert>
+            </div>
           </div>
         ) : (
         <div className="flex flex-col">

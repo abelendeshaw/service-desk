@@ -6,7 +6,7 @@ import {
 import {
   Ticket, CheckCircle2, Clock, MessageSquare, Plus,
   ChevronRight, BookOpen, TrendingUp, TrendingDown,
-  ArrowUpRight, LifeBuoy, Star,
+  ArrowUpRight, Star,
 } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -270,7 +270,6 @@ export function ClientDashboard() {
                   { label: 'Submit a New Ticket', icon: Plus, href: '/tickets/new', color: '#7c3aed' },
                   { label: 'View All My Tickets', icon: Ticket, href: '/tickets', color: '#2563eb' },
                   { label: 'Browse Knowledge Base', icon: BookOpen, href: '/knowledge', color: '#059669' },
-                  { label: 'Contact Support', icon: LifeBuoy, href: '/support/new', color: '#d97706' },
                   { label: 'Send an Email', icon: MessageSquare, href: '/email-support/new', color: '#6c757d' },
                 ].map((action) => (
                   <button
