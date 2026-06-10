@@ -798,30 +798,28 @@ function UsersScreen({
             <Plus className="h-3.5 w-3.5" /> Add User
           </Button>
         </div>
-        <div className="flex min-h-9 flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
             <Search className="pointer-events-none absolute top-2.5 left-3 h-3.5 w-3.5 text-muted-foreground" />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users…" className="h-9 w-56 pl-8 text-xs shadow-none" />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="h-9 w-40 text-xs shadow-none"><SelectValue placeholder="All roles" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs">All roles</SelectItem>
-                {roles.map((r) => <SelectItem key={r.id} value={r.name} className="text-xs">{r.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-9 w-32 text-xs shadow-none"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs">All</SelectItem>
-                <SelectItem value="Active" className="text-xs">Active</SelectItem>
-                <SelectItem value="Inactive" className="text-xs">Inactive</SelectItem>
-                <SelectItem value="Invited" className="text-xs">Invited</SelectItem>
-                <SelectItem value="Pending" className="text-xs">Pending</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="h-9 w-40 text-xs shadow-none"><SelectValue placeholder="All roles" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="text-xs">All roles</SelectItem>
+              {roles.map((r) => <SelectItem key={r.id} value={r.name} className="text-xs">{r.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-9 w-32 text-xs shadow-none"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="text-xs">All</SelectItem>
+              <SelectItem value="Active" className="text-xs">Active</SelectItem>
+              <SelectItem value="Inactive" className="text-xs">Inactive</SelectItem>
+              <SelectItem value="Invited" className="text-xs">Invited</SelectItem>
+              <SelectItem value="Pending" className="text-xs">Pending</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
