@@ -715,6 +715,9 @@ function UsersScreen({
   const [selectedPoolUser, setSelectedPoolUser] = useState<string | null>(null);
   const [addRole, setAddRole] = useState<string>(roles.find((r) => r.name === "Field Engineer")?.name ?? roles[0]?.name ?? "");
   const [comboOpen, setComboOpen] = useState(false);
+  const [inviteName, setInviteName] = useState("");
+  const [invitePhone, setInvitePhone] = useState("");
+  const [inviteDepartment, setInviteDepartment] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<UserRecord | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -728,7 +731,8 @@ function UsersScreen({
   );
 
   const looksLikeEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
-  const canAdd = !!selectedPoolUser || looksLikeEmail(addSearch);
+  const isUnknownInvite = !selectedPoolUser && looksLikeEmail(addSearch);
+  const canAdd = !!selectedPoolUser || (isUnknownInvite && inviteName.trim().length > 0);
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
@@ -751,20 +755,20 @@ function UsersScreen({
       const pool = SD_USER_POOL.find((u) => u.id === selectedPoolUser);
       if (!pool) return;
       newUser = { ...pool, status: "Invited", lastLogin: "—", dateJoined: new Date().toISOString().slice(0, 10), roles: [addRole], teamIds: [] };
-    } else if (looksLikeEmail(addSearch)) {
-      const email = addSearch.trim();
-      const localPart = email.split("@")[0] ?? "";
-      const derivedName = localPart.split(/[._-]+/).filter(Boolean).map((p) => p[0]!.toUpperCase() + p.slice(1)).join(" ") || "Invited User";
+    } else if (isUnknownInvite) {
       newUser = {
-        id: `inv-${Date.now()}`, name: derivedName, email,
-        phone: "", jobTitle: "—", branch: "", department: "—", division: "",
+        id: `inv-${Date.now()}`, name: inviteName.trim(), email: addSearch.trim(),
+        phone: invitePhone.trim(), jobTitle: "—", branch: "",
+        department: inviteDepartment.trim() || "—", division: "",
         status: "Invited", lastLogin: "—", dateJoined: new Date().toISOString().slice(0, 10),
         roles: [addRole], teamIds: [],
       };
     }
     if (!newUser) return;
     setUsers((prev) => [newUser!, ...prev]);
-    setAddOpen(false); setSelectedPoolUser(null); setAddSearch(""); setComboOpen(false);
+    setAddOpen(false);
+    setSelectedPoolUser(null); setAddSearch(""); setComboOpen(false);
+    setInviteName(""); setInvitePhone(""); setInviteDepartment("");
     setAddRole(roles.find((r) => r.name === "Field Engineer")?.name ?? roles[0]?.name ?? "");
   }
 
@@ -948,10 +952,14 @@ function UsersScreen({
       )}
 
       {/* Add User dialog */}
-      <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) { setSelectedPoolUser(null); setAddSearch(""); setComboOpen(false); } }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Add User</DialogTitle></DialogHeader>
-          <div className="space-y-3">
+      <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) { setSelectedPoolUser(null); setAddSearch(""); setComboOpen(false); setInviteName(""); setInvitePhone(""); setInviteDepartment(""); } }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add User</DialogTitle>
+            <p className="mt-1 text-xs text-muted-foreground">Search for a known team member or enter an email address to invite someone new.</p>
+          </DialogHeader>
+          <div className="space-y-4 py-1">
+            {/* Employee search */}
             <div>
               <label className="mb-1.5 block text-xs font-medium">Employee <span className="text-destructive">*</span></label>
               <div
@@ -960,54 +968,103 @@ function UsersScreen({
               >
                 <Input
                   value={addSearch}
-                  placeholder="Search or type an email to invite"
-                  className="h-9 pr-8 text-xs shadow-none"
+                  placeholder="Search by name or type an email address…"
+                  className="h-10 pr-8 text-sm shadow-none"
                   onFocus={() => setComboOpen(true)}
                   onClick={() => setComboOpen(true)}
                   onChange={(e) => { setAddSearch(e.target.value); setSelectedPoolUser(null); setComboOpen(true); }}
                 />
-                <Search className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Search className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 {comboOpen && (
                   <div className="absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-border bg-popover p-1 shadow-md">
                     {poolCandidates.length === 0 ? (
-                      <div className="px-2 py-2 text-xs text-muted-foreground">
-                        {looksLikeEmail(addSearch) ? `Press "Add User" to invite ${addSearch.trim()}.` : "No matching users. Type an email to invite."}
+                      <div className="px-3 py-2.5 text-xs text-muted-foreground">
+                        {looksLikeEmail(addSearch)
+                          ? `No match found — fill in the details below to invite ${addSearch.trim()}.`
+                          : "No matching employees. Type an email address to invite someone new."}
                       </div>
                     ) : poolCandidates.map((u) => (
                       <button
                         key={u.id} type="button"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => { setSelectedPoolUser(u.id); setAddSearch(u.name); setComboOpen(false); }}
-                        className={cn("flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition-colors hover:bg-muted/50", selectedPoolUser === u.id && "bg-primary/10 ring-1 ring-primary/30")}
+                        className={cn("flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-muted/50", selectedPoolUser === u.id && "bg-primary/10 ring-1 ring-primary/30")}
                       >
-                        <Avatar className="h-7 w-7 shrink-0">
+                        <Avatar className="h-8 w-8 shrink-0">
                           <AvatarFallback className={cn(avatarColor(u.name), "text-[10px] font-semibold text-white")}>{initials(u.name)}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <div className="text-xs font-medium leading-tight">{u.name}</div>
-                          <div className="text-[10px] text-muted-foreground">{u.email} · {u.department}</div>
+                          <div className="text-sm font-medium leading-tight">{u.name}</div>
+                          <div className="text-xs text-muted-foreground">{u.email} · {u.department}</div>
                         </div>
-                        {selectedPoolUser === u.id && <Check className="ml-auto h-3.5 w-3.5 shrink-0 text-primary" />}
+                        {selectedPoolUser === u.id && <Check className="ml-auto h-4 w-4 shrink-0 text-primary" />}
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-              <p className="mt-1 text-[10px] text-muted-foreground">Pick a team member or type an email address to invite a new user.</p>
             </div>
+
+            {/* New invitee details — shown only when typed value is an unrecognised email */}
+            {isUnknownInvite && (
+              <div className="rounded-lg border border-border bg-muted/40 p-4">
+                <div className="mb-4 flex items-center gap-2">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">New invitee details</span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium">
+                      Full Name <span className="text-destructive">*</span>
+                    </label>
+                    <Input
+                      value={inviteName}
+                      onChange={(e) => setInviteName(e.target.value)}
+                      placeholder="e.g. Sisay Shiferaw"
+                      className="h-10 bg-background text-sm shadow-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium">Phone</label>
+                      <Input
+                        value={invitePhone}
+                        onChange={(e) => setInvitePhone(e.target.value)}
+                        placeholder="+251 911 000 000"
+                        className="h-10 bg-background text-sm shadow-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium">Department</label>
+                      <Input
+                        value={inviteDepartment}
+                        onChange={(e) => setInviteDepartment(e.target.value)}
+                        placeholder="e.g. Field Operations"
+                        className="h-10 bg-background text-sm shadow-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Role */}
             <div>
               <label className="mb-1.5 block text-xs font-medium">Assign Role</label>
               <Select value={addRole} onValueChange={setAddRole}>
-                <SelectTrigger className="h-9 w-full text-xs shadow-none"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-10 w-full text-sm shadow-none"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {roles.map((r) => <SelectItem key={r.id} value={r.name} className="text-xs">{r.name}</SelectItem>)}
+                  {roles.map((r) => <SelectItem key={r.id} value={r.name} className="text-sm">{r.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="border-t pt-4">
             <Button variant="outline" size="sm" onClick={() => setAddOpen(false)}>Cancel</Button>
-            <Button size="sm" disabled={!canAdd} onClick={handleAddUser}>Add User</Button>
+            <Button size="sm" disabled={!canAdd} onClick={handleAddUser}>
+              {isUnknownInvite ? "Send Invite" : "Add User"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
