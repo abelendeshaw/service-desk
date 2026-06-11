@@ -12,7 +12,7 @@ export function CreateSupport() {
     name: '',
     client: '',
     team: '',
-    agent: '',
+    fieldEngineer: '',
     startDate: '',
     endDate: '',
     notes: '',
@@ -134,9 +134,9 @@ export function CreateSupport() {
                     </select>
                   </div>
                   <div>
-                    <label className={labelClasses}>Lead Agent</label>
-                    <select value={form.agent} onChange={e => update('agent', e.target.value)} className={selectClasses}>
-                      <option value="">Select agent (optional)</option>
+                    <label className={labelClasses}>Lead Field Engineer</label>
+                    <select value={form.fieldEngineer} onChange={e => update('fieldEngineer', e.target.value)} className={selectClasses}>
+                      <option value="">Select Field Engineer (optional)</option>
                       <option>Sisay Shiferaw</option>
                       <option>Wongel Wondyifraw</option>
                       <option>Masresha Melese</option>
@@ -183,7 +183,7 @@ export function CreateSupport() {
                     { label: 'Name', value: form.name || '—' },
                     { label: 'Client', value: form.client || '—' },
                     { label: 'Team', value: form.team || '—' },
-                    { label: 'Lead Agent', value: form.agent || 'Not assigned' },
+                    { label: 'Lead Field Engineer', value: form.fieldEngineer || 'Not assigned' },
                     { label: 'Start Date', value: form.startDate || '—' },
                     { label: 'End Date', value: form.endDate || '—' },
                   ].map(({ label, value }) => (

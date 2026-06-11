@@ -9,15 +9,45 @@ import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { useServiceDesk } from '../store/serviceDeskStore';
+import type { SLA, SLAStatus } from '../store/types';
+import { calcSLAStatus, calcSupportType } from './SLAManagement';
 
 const avatarColors = ['#7c3aed', '#1d4ed8', '#0891b2', '#059669', '#d97706', '#dc2626'];
+
+const supportTypeConfig: Record<string, { badgeClass: string }> = {
+  CSAT: { badgeClass: 'bg-red-50 text-red-700 border-red-200' },
+  'Normal Support': { badgeClass: 'bg-blue-50 text-blue-700 border-blue-200' },
+};
+
+function matchSLAs(slas: SLA[], company: string): SLA[] {
+  const c = company.toLowerCase();
+  return slas.filter((s) => {
+    const sc = s.companyName.toLowerCase();
+    return sc === c || sc.startsWith(c + ' ');
+  });
+}
+
+function getProjectSLAStatus(slas: SLA[], project: string): SLAStatus | null {
+  const matched = matchSLAs(slas, project);
+  if (matched.length === 0) return null;
+  const statuses = matched.map((s) => calcSLAStatus(s.startDate, s.endDate));
+  if (statuses.includes('Expiring Soon')) return 'Expiring Soon';
+  if (statuses.includes('Active')) return 'Active';
+  if (statuses.includes('Upcoming')) return 'Upcoming';
+  return 'Expired';
+}
+
+function getTicketSupportType(slas: SLA[], project: string): string {
+  const status = getProjectSLAStatus(slas, project);
+  return status ? calcSupportType(status) : 'Normal Support';
+}
 
 export function KnowledgeBase() {
   const { project } = useParams<{ project?: string }>();
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const navigate = useNavigate();
-  const { tickets, ticketArticles, getOrCreateTicketArticle } = useServiceDesk();
+  const { tickets, ticketArticles, getOrCreateTicketArticle, slas } = useServiceDesk();
 
   const projects = useMemo(
     () => Array.from(new Set(tickets.map((t) => t.project))).sort(),
@@ -31,14 +61,15 @@ export function KnowledgeBase() {
     const pool = activeProject ? tickets.filter((t) => t.project === activeProject) : tickets;
     return pool.filter((t) => {
       if (!search) return true;
+      const supportType = getTicketSupportType(slas, t.project);
       return (
         t.subject.toLowerCase().includes(search.toLowerCase()) ||
         t.id.includes(search) ||
-        t.supportType.toLowerCase().includes(search.toLowerCase()) ||
+        supportType.toLowerCase().includes(search.toLowerCase()) ||
         t.project.toLowerCase().includes(search.toLowerCase())
       );
     });
-  }, [activeProject, search, tickets]);
+  }, [activeProject, search, slas, tickets]);
 
   return (
     <div className="flex h-full flex-col bg-muted/30">
@@ -157,6 +188,8 @@ export function KnowledgeBase() {
               )}
               {projectTickets.map((t, idx) => {
                 const article = ticketArticles[t.id] ?? getOrCreateTicketArticle({ ticketId: t.id });
+                const supportType = getTicketSupportType(slas, t.project);
+                const supportBadge = supportTypeConfig[supportType];
                 return (
                   <TableRow key={t.id} className="group cursor-pointer" onClick={() => navigate(`/knowledge/ticket/${t.id}`)}>
                     <TableCell className="px-5 py-3.5">
@@ -171,12 +204,12 @@ export function KnowledgeBase() {
                         </Avatar>
                         <div className="min-w-0">
                           <div className="max-w-md truncate text-[13px] font-medium">{t.subject}</div>
-                          <div className="mt-0.5 text-[11px] text-muted-foreground">#{t.id} · {t.project} · {t.supportType}</div>
+                          <div className="mt-0.5 text-[11px] text-muted-foreground">#{t.id} · {t.project}</div>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="px-5 py-3.5">
-                      <Badge variant="outline" className="text-[11px]">{t.supportType}</Badge>
+                      <Badge variant="outline" className={`text-[11px] ${supportBadge.badgeClass}`}>{supportType}</Badge>
                     </TableCell>
                     <TableCell className="px-5 py-3.5">
                       <Badge variant="secondary" className="text-[11px]">{t.project}</Badge>
@@ -212,6 +245,8 @@ export function KnowledgeBase() {
             )}
             {projectTickets.map((t, idx) => {
               const article = ticketArticles[t.id] ?? getOrCreateTicketArticle({ ticketId: t.id });
+              const supportType = getTicketSupportType(slas, t.project);
+              const supportBadge = supportTypeConfig[supportType];
               return (
                 <Card key={t.id} className="group cursor-pointer p-4 transition-all hover:shadow-sm" onClick={() => navigate(`/knowledge/ticket/${t.id}`)}>
                   <CardContent className="p-0">
@@ -225,7 +260,7 @@ export function KnowledgeBase() {
                     </div>
                     <h3 className="mb-2 line-clamp-2 text-[13px] leading-snug font-medium">{t.subject}</h3>
                     <div className="flex items-center justify-between mt-3">
-                      <Badge variant="outline" className="text-[10px]">{t.supportType}</Badge>
+                      <Badge variant="outline" className={`text-[10px] ${supportBadge.badgeClass}`}>{supportType}</Badge>
                       <span className={`text-[11px] font-medium ${article.status === 'Published' ? 'text-emerald-600' : 'text-muted-foreground'}`}>{article.status}</span>
                     </div>
                     <div className="mt-2 border-t pt-2 text-[11px] text-muted-foreground">{t.project} · #{t.id} · {article.updatedAt.slice(0, 10)}</div>

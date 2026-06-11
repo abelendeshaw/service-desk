@@ -128,7 +128,7 @@ const recentTickets = [
   { id: '#00130', subject: 'MOTI power issue at main data center', status: 'Open', priority: null, age: '42d', company: 'MoTI', initials: 'MT', color: '#0891b2' },
 ];
 
-const agentPerformance = [
+const fieldEngineerPerformance = [
   { name: 'Sisay Shiferaw', email: 'sisay@ienetworks.co', assigned: 1, resolved: 0, rate: 0, initials: 'SS', color: '#7c3aed' },
   { name: 'Wongel Wondyifraw', email: 'wongel@ienetworks.co', assigned: 2, resolved: 0, rate: 0, initials: 'WW', color: '#1d4ed8' },
   { name: 'Masresha Melese', email: 'masresha@ienetworks.co', assigned: 1, resolved: 0, rate: 0, initials: 'MM', color: '#0891b2' },
@@ -419,40 +419,40 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Agent Performance */}
+        {/* Field Engineer Performance */}
         <Card className="gap-0 overflow-hidden p-0">
           <CardHeader className="border-b">
-            <CardTitle className="text-[14px]">Agent Performance</CardTitle>
-            <CardDescription className="mt-0.5 text-[12px]">{agentPerformance.length} agents tracked</CardDescription>
+            <CardTitle className="text-[14px]">Field Engineer Performance</CardTitle>
+            <CardDescription className="mt-0.5 text-[12px]">{fieldEngineerPerformance.length} Field Engineers tracked</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
           <div className="divide-y">
-            {agentPerformance.map((agent) => (
-              <div key={agent.name} className="px-5 py-3 transition-colors hover:bg-muted/50">
+            {fieldEngineerPerformance.map((fieldEngineer) => (
+              <div key={fieldEngineer.name} className="px-5 py-3 transition-colors hover:bg-muted/50">
                 <div className="flex items-center gap-2.5 mb-2">
                   <div
                     className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-semibold flex-shrink-0"
-                    style={{ backgroundColor: agent.color }}
+                    style={{ backgroundColor: fieldEngineer.color }}
                   >
-                    {agent.initials}
+                    {fieldEngineer.initials}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[13px] font-medium truncate">{agent.name}</div>
-                    <div className="text-[11px] text-muted-foreground truncate">{agent.email}</div>
+                    <div className="text-[13px] font-medium truncate">{fieldEngineer.name}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">{fieldEngineer.email}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-4 mt-1">
                   <div>
                     <div className="text-[11px] text-muted-foreground">Assigned</div>
-                    <div className="text-[13px] font-semibold">{agent.assigned}</div>
+                    <div className="text-[13px] font-semibold">{fieldEngineer.assigned}</div>
                   </div>
                   <div>
                     <div className="text-[11px] text-muted-foreground">Resolved</div>
-                    <div className="text-[13px] font-semibold text-emerald-600">{agent.resolved}</div>
+                    <div className="text-[13px] font-semibold text-emerald-600">{fieldEngineer.resolved}</div>
                   </div>
                   <div className="flex-1">
                     <div className="mb-0.5 text-[11px] text-muted-foreground">Rate</div>
-                    <Progress value={agent.rate || 2} className="h-1.5" />
+                    <Progress value={fieldEngineer.rate || 2} className="h-1.5" />
                   </div>
                 </div>
               </div>

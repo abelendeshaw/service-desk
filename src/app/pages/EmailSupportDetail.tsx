@@ -385,7 +385,7 @@ export function EmailSupportDetail() {
                 </Select>
               </div>
               <div>
-                <div className="mb-1 text-[11px] text-muted-foreground">Assigned Agent</div>
+                <div className="mb-1 text-[11px] text-muted-foreground">Assigned Field Engineer</div>
                 <Select defaultValue="Wongel Wondyifraw">
                   <SelectTrigger className="h-8 text-[12px]"><SelectValue /></SelectTrigger>
                   <SelectContent>

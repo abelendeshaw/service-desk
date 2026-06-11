@@ -40,7 +40,7 @@ export function CreateEmailSupport() {
     body: '',
     priority: 'Medium',
     tag: '',
-    agent: '',
+    fieldEngineer: '',
     team: '',
   });
   const [attachments, setAttachments] = useState<string[]>([]);
@@ -261,8 +261,8 @@ export function CreateEmailSupport() {
                     </select>
                   </div>
                   <div>
-                    <label className={labelClasses}>Assign Agent <span className="text-[#9ca3af] font-normal">(optional)</span></label>
-                    <select value={form.agent} onChange={e => update('agent', e.target.value)} className={selectClasses}>
+                    <label className={labelClasses}>Assign Field Engineer <span className="text-[#9ca3af] font-normal">(optional)</span></label>
+                    <select value={form.fieldEngineer} onChange={e => update('fieldEngineer', e.target.value)} className={selectClasses}>
                       <option value="">Auto-assign based on availability</option>
                       <option>Wongel Wondyifraw</option>
                       <option>Sisay Shiferaw</option>
@@ -296,8 +296,8 @@ export function CreateEmailSupport() {
                         <span className="font-medium text-[#1a1d21]">{form.team || 'Not assigned'}</span>
                       </div>
                       <div className="flex gap-2">
-                        <span className="text-[#9ca3af] w-20">Agent:</span>
-                        <span className="font-medium text-[#1a1d21]">{form.agent || 'Auto-assign'}</span>
+                        <span className="text-[#9ca3af] w-20">Field Engineer:</span>
+                        <span className="font-medium text-[#1a1d21]">{form.fieldEngineer || 'Auto-assign'}</span>
                       </div>
                       <div className="flex gap-2">
                         <span className="text-[#9ca3af] w-20">Priority:</span>
@@ -349,7 +349,7 @@ export function CreateEmailSupport() {
                 <div className="space-y-0">
                   {[
                     { label: 'Team', value: form.team || '—' },
-                    { label: 'Agent', value: form.agent || 'Auto-assign' },
+                    { label: 'Field Engineer', value: form.fieldEngineer || 'Auto-assign' },
                     { label: 'Priority', value: form.priority },
                     { label: 'Tag', value: form.tag || 'None' },
                   ].map(({ label, value }) => (

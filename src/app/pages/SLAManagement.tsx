@@ -596,43 +596,43 @@ const emailData = [
     id: 'EM-001', from: 'EPSS Client', fromEmail: 'epss@gmail.com', initials: 'EP', color: '#7c3aed',
     subject: 'Urgent: FortiGate firewall dropping VPN sessions intermittently',
     preview: 'We are experiencing frequent VPN session drops on our FortiGate firewall at the Addis Ababa data center. This is affecting...',
-    date: '10:32 AM', status: 'Open', priority: 'Critical', unread: true, starred: false, attachments: 1, tag: 'Network', agent: 'WW',
+    date: '10:32 AM', status: 'Open', priority: 'Critical', unread: true, starred: false, attachments: 1, tag: 'Network', fieldEngineer: 'WW',
   },
   {
     id: 'EM-002', from: 'IE Client', fromEmail: 'ie@gmail.com', initials: 'IE', color: '#0891b2',
     subject: 'Request: New user account creation for 3 staff members',
     preview: 'Good morning, we need to create new Active Directory accounts for 3 new staff joining next Monday. Please find the details attached.',
-    date: 'Yesterday', status: 'Pending', priority: 'Low', unread: false, starred: true, attachments: 0, tag: 'Access', agent: 'SS',
+    date: 'Yesterday', status: 'Pending', priority: 'Low', unread: false, starred: true, attachments: 0, tag: 'Access', fieldEngineer: 'SS',
   },
   {
     id: 'EM-003', from: 'MinT Client', fromEmail: 'mint@gmail.com', initials: 'MI', color: '#6b7280',
     subject: 'Follow-up on network latency issue reported last week',
     preview: 'We wanted to follow up on the network latency issue we reported last week. The problem persists during peak hours between 9AM and 12PM.',
-    date: 'Yesterday', status: 'Open', priority: 'High', unread: false, starred: false, attachments: 2, tag: 'Network', agent: 'DB',
+    date: 'Yesterday', status: 'Open', priority: 'High', unread: false, starred: false, attachments: 2, tag: 'Network', fieldEngineer: 'DB',
   },
   {
     id: 'EM-004', from: 'CSA Client', fromEmail: 'csa@gmail.com', initials: 'CS', color: '#0891b2',
     subject: 'Monthly report request — Q1 2026 system uptime and incident summary',
     preview: 'Please provide the monthly uptime and incident report for Q1 2026. The management team needs this by end of week for their review.',
-    date: 'Apr 12', status: 'Closed', priority: 'Medium', unread: false, starred: false, attachments: 0, tag: 'Reporting', agent: 'AT',
+    date: 'Apr 12', status: 'Closed', priority: 'Medium', unread: false, starred: false, attachments: 0, tag: 'Reporting', fieldEngineer: 'AT',
   },
   {
     id: 'EM-005', from: 'ERA/MOTL Client', fromEmail: 'eramotl@gmail.com', initials: 'ER', color: '#059669',
     subject: 'Infrastructure upgrade proposal — need technical review',
     preview: 'We are planning to upgrade our server infrastructure and would like a technical review of our proposed setup before proceeding.',
-    date: 'Apr 11', status: 'Open', priority: 'Medium', unread: true, starred: false, attachments: 3, tag: 'Infrastructure', agent: null,
+    date: 'Apr 11', status: 'Open', priority: 'Medium', unread: true, starred: false, attachments: 3, tag: 'Infrastructure', fieldEngineer: null,
   },
   {
     id: 'EM-006', from: 'MoWS Client', fromEmail: 'mows@gmail.com', initials: 'MW', color: '#d97706',
     subject: 'CSAT Survey Response — Technical Support Feedback',
     preview: 'Thank you for the recent support engagement. We have completed the CSAT survey and wanted to share our feedback directly as well.',
-    date: 'Apr 10', status: 'Closed', priority: 'Low', unread: false, starred: false, attachments: 0, tag: 'CSAT', agent: 'WW',
+    date: 'Apr 10', status: 'Closed', priority: 'Low', unread: false, starred: false, attachments: 0, tag: 'CSAT', fieldEngineer: 'WW',
   },
   {
     id: 'EM-007', from: 'Abay Bank Client', fromEmail: 'abaybank@gmail.com', initials: 'AB', color: '#dc2626',
     subject: 'Critical: Core banking system cannot connect to backup server',
     preview: 'URGENT — Our core banking application is failing to connect to the backup server since this morning. Transactions are being affected.',
-    date: 'Apr 9', status: 'Closed', priority: 'Critical', unread: false, starred: true, attachments: 1, tag: 'Critical', agent: 'SS',
+    date: 'Apr 9', status: 'Closed', priority: 'Critical', unread: false, starred: true, attachments: 1, tag: 'Critical', fieldEngineer: 'SS',
   },
 ];
 
@@ -823,9 +823,9 @@ function EmailSupportTab() {
                           <Paperclip className="w-3 h-3" />{email.attachments}
                         </span>
                       )}
-                      {email.agent && (
+                      {email.fieldEngineer && (
                         <Avatar className="ml-auto size-5">
-                          <AvatarFallback className="text-[9px] font-semibold">{email.agent}</AvatarFallback>
+                          <AvatarFallback className="text-[9px] font-semibold">{email.fieldEngineer}</AvatarFallback>
                         </Avatar>
                       )}
                     </div>

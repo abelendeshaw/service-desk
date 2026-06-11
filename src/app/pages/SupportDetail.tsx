@@ -38,7 +38,7 @@ const engagement = {
   client: 'EPSS',
   type: 'Technical Support',
   team: 'END Team',
-  agent: 'Wongel Wondyifraw',
+  fieldEngineer: 'Wongel Wondyifraw',
   startDate: '2026-01-01',
   endDate: '2026-03-31',
   csat: 72,
@@ -52,11 +52,11 @@ const engagement = {
 };
 
 const tickets = [
-  { id: '#00135', subject: 'Diredawa site WiFi access issue', priority: 'High', status: 'Closed', date: '2026-01-03', agent: 'WW' },
-  { id: '#00142', subject: 'FortiGate VPN connectivity drop', priority: 'Critical', status: 'Open', date: '2026-01-08', agent: 'SS' },
-  { id: '#00158', subject: 'Cisco switch port configuration', priority: 'Medium', status: 'Pending', date: '2026-01-15', agent: 'WW' },
-  { id: '#00163', subject: 'Server backup verification request', priority: 'Low', status: 'Closed', date: '2026-01-18', agent: 'MM' },
-  { id: '#00177', subject: 'Network latency on MPLS link', priority: 'High', status: 'Open', date: '2026-01-25', agent: 'DB' },
+  { id: '#00135', subject: 'Diredawa site WiFi access issue', priority: 'High', status: 'Closed', date: '2026-01-03', fieldEngineer: 'WW' },
+  { id: '#00142', subject: 'FortiGate VPN connectivity drop', priority: 'Critical', status: 'Open', date: '2026-01-08', fieldEngineer: 'SS' },
+  { id: '#00158', subject: 'Cisco switch port configuration', priority: 'Medium', status: 'Pending', date: '2026-01-15', fieldEngineer: 'WW' },
+  { id: '#00163', subject: 'Server backup verification request', priority: 'Low', status: 'Closed', date: '2026-01-18', fieldEngineer: 'MM' },
+  { id: '#00177', subject: 'Network latency on MPLS link', priority: 'High', status: 'Open', date: '2026-01-25', fieldEngineer: 'DB' },
 ];
 
 const timeline = [
@@ -257,7 +257,7 @@ export function SupportDetail() {
                       <TableHead className="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Priority</TableHead>
                       <TableHead className="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Status</TableHead>
                       <TableHead className="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Date</TableHead>
-                      <TableHead className="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Agent</TableHead>
+                      <TableHead className="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Field Engineer</TableHead>
                       <TableHead className="w-10 pr-4" />
                     </TableRow>
                   </TableHeader>
@@ -293,7 +293,7 @@ export function SupportDetail() {
                           </TableCell>
                           <TableCell className="px-4 py-3.5">
                             <Avatar className="size-6">
-                              <AvatarFallback className="text-[10px] font-semibold">{t.agent}</AvatarFallback>
+                              <AvatarFallback className="text-[10px] font-semibold">{t.fieldEngineer}</AvatarFallback>
                             </Avatar>
                           </TableCell>
                           <TableCell className="pr-4 py-3.5" onClick={(event) => event.stopPropagation()}>
@@ -381,7 +381,7 @@ export function SupportDetail() {
                 { label: 'Client', value: engagement.client },
                 { label: 'Type', value: engagement.type },
                 { label: 'Team', value: engagement.team },
-                { label: 'Lead Agent', value: engagement.agent },
+                { label: 'Lead Field Engineer', value: engagement.fieldEngineer },
                 { label: 'Start Date', value: engagement.startDate },
                 { label: 'End Date', value: engagement.endDate },
               ].map(({ label, value }) => (

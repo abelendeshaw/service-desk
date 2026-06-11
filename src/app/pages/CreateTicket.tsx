@@ -253,7 +253,7 @@ export function CreateTicket() {
                     )}
                   </div>
                   <div>
-                    <label className={labelClasses}>Assign Agent</label>
+                    <label className={labelClasses}>Assign Field Engineer</label>
                     <select value={form.fieldEngineerId} onChange={e => update('fieldEngineerId', e.target.value)} className={selectClasses}>
                       <option value="">Select field engineer (optional)</option>
                       {engineers.map((e) => (

@@ -308,7 +308,7 @@ export function TicketDetail() {
                 </p>
               </Card>
 
-              {/* Teams & Agents */}
+              {/* Teams & Field Engineers */}
               <Card className="p-5">
                 <div className="grid grid-cols-2 gap-6">
                   <div>
@@ -363,7 +363,7 @@ export function TicketDetail() {
                       <div className="flex items-center gap-1.5">
                         <UserPlus className="w-3.5 h-3.5 text-muted-foreground" />
                         <span className="text-[12px] font-semibold">
-                          AGENTS
+                          FIELD ENGINEERS
                         </span>
                         <Badge
                           variant="secondary"
@@ -382,13 +382,13 @@ export function TicketDetail() {
                     <div className="space-y-2 text-[13px] text-muted-foreground">
                       <div className="flex items-center gap-2 rounded-md border border-dashed p-2.5">
                         <UserPlus className="w-3.5 h-3.5" />
-                        No agents assigned yet
+                        No Field Engineers assigned yet
                       </div>
                       <Button
                         variant="link"
                         className="h-auto gap-0.5 p-0 text-[12px]"
                       >
-                        Assign teams & agents{" "}
+                        Assign teams & Field Engineers{" "}
                         <ChevronDown className="w-3 h-3" />
                       </Button>
                     </div>

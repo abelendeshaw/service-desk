@@ -44,7 +44,7 @@ const emails = [
     starred: false,
     attachments: 1,
     tag: 'Network',
-    agent: 'WW',
+    fieldEngineer: 'WW',
   },
   {
     id: 'EM-002',
@@ -61,7 +61,7 @@ const emails = [
     starred: true,
     attachments: 0,
     tag: 'Access',
-    agent: 'SS',
+    fieldEngineer: 'SS',
   },
   {
     id: 'EM-003',
@@ -78,7 +78,7 @@ const emails = [
     starred: false,
     attachments: 2,
     tag: 'Network',
-    agent: 'DB',
+    fieldEngineer: 'DB',
   },
   {
     id: 'EM-004',
@@ -95,7 +95,7 @@ const emails = [
     starred: false,
     attachments: 0,
     tag: 'Reporting',
-    agent: 'AT',
+    fieldEngineer: 'AT',
   },
   {
     id: 'EM-005',
@@ -112,7 +112,7 @@ const emails = [
     starred: false,
     attachments: 3,
     tag: 'Infrastructure',
-    agent: null,
+    fieldEngineer: null,
   },
   {
     id: 'EM-006',
@@ -129,7 +129,7 @@ const emails = [
     starred: false,
     attachments: 0,
     tag: 'CSAT',
-    agent: 'WW',
+    fieldEngineer: 'WW',
   },
   {
     id: 'EM-007',
@@ -146,7 +146,7 @@ const emails = [
     starred: true,
     attachments: 1,
     tag: 'Critical',
-    agent: 'SS',
+    fieldEngineer: 'SS',
   },
 ];
 
@@ -402,9 +402,9 @@ export function EmailSupport() {
                           {email.attachments}
                         </span>
                       )}
-                      {email.agent && (
+                      {email.fieldEngineer && (
                         <Avatar className="ml-auto size-5">
-                          <AvatarFallback className="text-[9px] font-semibold">{email.agent}</AvatarFallback>
+                          <AvatarFallback className="text-[9px] font-semibold">{email.fieldEngineer}</AvatarFallback>
                         </Avatar>
                       )}
                     </div>
