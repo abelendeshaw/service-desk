@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTheme } from "next-themes";
 import {
   Camera,
@@ -28,7 +28,6 @@ import {
 } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Switch } from "../components/ui/switch";
 
 type Section = "profile" | "security" | "appearance";
 
@@ -215,51 +214,28 @@ export function Settings() {
               )}
 
               {activeSection === "appearance" && (
-                <>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Theme</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-3 gap-3">
-                      {[
-                        { key: "light", icon: Sun, label: "Light" },
-                        { key: "dark", icon: Moon, label: "Dark" },
-                        { key: "system", icon: Monitor, label: "System" },
-                      ].map(({ key, icon: Icon, label }) => (
-                        <Button
-                          key={key}
-                          variant={theme === key ? "secondary" : "outline"}
-                          className="h-auto flex-col gap-2 py-4"
-                          onClick={() => setTheme(key)}
-                        >
-                          <Icon />
-                          {label}
-                        </Button>
-                      ))}
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Display</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid gap-3">
-                      {[
-                        { label: "Compact Mode", description: "Reduce spacing throughout the interface" },
-                        { label: "Show Ticket IDs", description: "Display ticket IDs in all views" },
-                        { label: "Auto-refresh Dashboard", description: "Refresh dashboard metrics every 5 minutes" },
-                      ].map(({ label, description }) => (
-                        <div key={label} className="flex items-center justify-between rounded-md border p-3">
-                          <div>
-                            <p className="font-medium">{label}</p>
-                            <p className="text-xs text-muted-foreground">{description}</p>
-                          </div>
-                          <Switch />
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                </>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Theme</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-3 gap-3">
+                    {[
+                      { key: "light", icon: Sun, label: "Light" },
+                      { key: "dark", icon: Moon, label: "Dark" },
+                      { key: "system", icon: Monitor, label: "System" },
+                    ].map(({ key, icon: Icon, label }) => (
+                      <Button
+                        key={key}
+                        variant={theme === key ? "secondary" : "outline"}
+                        className="h-auto flex-col gap-2 py-4"
+                        onClick={() => setTheme(key)}
+                      >
+                        <Icon />
+                        {label}
+                      </Button>
+                    ))}
+                  </CardContent>
+                </Card>
               )}
 
             </CardContent>
