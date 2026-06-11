@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router";
 import { toast } from "sonner";
 import {
@@ -18,7 +18,12 @@ import {
   HelpCircle,
   Mail,
   BarChart2,
-  ShieldCheck,
+  CheckCheck,
+  X,
+  UserCheck,
+  RefreshCw,
+  AlertTriangle,
+  Info as InfoIcon,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -41,18 +46,31 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useServiceDesk } from "../store/serviceDeskStore";
 
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+const kindConfig = {
+  assignment: { icon: UserCheck,     bg: "bg-blue-50",    text: "text-blue-600",    label: "Assignment" },
+  status:     { icon: RefreshCw,     bg: "bg-emerald-50", text: "text-emerald-600", label: "Status" },
+  escalation: { icon: AlertTriangle, bg: "bg-red-50",     text: "text-red-600",     label: "Escalation" },
+  email:      { icon: Mail,          bg: "bg-violet-50",  text: "text-violet-600",  label: "Email" },
+  system:     { icon: InfoIcon,      bg: "bg-muted",      text: "text-muted-foreground", label: "System" },
+} as const;
+
 const navGroups = [
-  {
-    label: "Overview",
-    items: [
-      { name: "Dashboard", href: "/", icon: LayoutDashboard, exact: true },
-    ],
-  },
   {
     label: "Helpdesk",
     items: [
       { name: "Tickets", href: "/tickets", icon: Ticket, exact: false },
-      { name: "SLA Management", href: "/sla", icon: ShieldCheck, exact: false },
       {
         name: "Knowledge Base",
         href: "/knowledge",
@@ -73,9 +91,23 @@ const navGroups = [
 export function MainLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifFilter, setNotifFilter] = useState<"all" | "unread">("all");
+  const notifRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const { notifications, markNotificationsRead } = useServiceDesk();
+  const { notifications, markNotificationsRead, markNotificationRead, dismissNotification } = useServiceDesk();
   const unreadCount = notifications.filter((n) => n.unread).length;
+  const displayedNotifs = notifFilter === "unread" ? notifications.filter((n) => n.unread) : notifications;
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    }
+    if (notifOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [notifOpen]);
 
   const confirmLogout = () => {
     setLogoutOpen(false);
@@ -91,7 +123,7 @@ export function MainLayout() {
       >
         {/* Logo */}
         <div
-          className={`border-sidebar-border h-[56px] flex items-center border-b flex-shrink-0 ${sidebarCollapsed ? "px-4 justify-center" : "px-5"}`}
+          className={`border-sidebar-border h-[56px] flex items-center border-b flex-shrink-0 ${sidebarCollapsed ? "px-3 justify-between" : "px-4 justify-between"}`}
         >
           {sidebarCollapsed ? (
             <div className="bg-secondary text-secondary-foreground flex size-7 items-center justify-center rounded-md flex-shrink-0">
@@ -112,10 +144,48 @@ export function MainLayout() {
               </div>
             </div>
           )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="text-sidebar-foreground/60 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent size-7 flex-shrink-0"
+          >
+            {sidebarCollapsed ? (
+              <PanelLeftOpen className="w-4 h-4" />
+            ) : (
+              <PanelLeftClose className="w-4 h-4" />
+            )}
+          </Button>
         </div>
 
         {/* Nav */}
         <nav className="flex flex-1 flex-col gap-4 overflow-y-auto py-3 px-2">
+          <div className="flex flex-col gap-0.5">
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-2 py-2 rounded-md transition-all duration-100 group relative ${
+                  isActive
+                    ? "bg-white text-primary dark:bg-sidebar-muted dark:text-sidebar-foreground"
+                    : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                } ${sidebarCollapsed ? "justify-center" : ""}`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive && !sidebarCollapsed && (
+                    <div className="bg-sidebar-accent absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full" />
+                  )}
+                  <LayoutDashboard className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-primary dark:text-sidebar-foreground" : ""}`} />
+                  {!sidebarCollapsed && (
+                    <span className="text-[13px] font-medium truncate">Dashboard</span>
+                  )}
+                </>
+              )}
+            </NavLink>
+          </div>
+
           {navGroups.map((group) => (
             <div key={group.label}>
               {!sidebarCollapsed && (
@@ -210,20 +280,6 @@ export function MainLayout() {
             )}
           </NavLink>
 
-          <Button
-            variant="ghost"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className={`text-sidebar-foreground/70 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent h-auto w-full items-center gap-3 rounded-md px-2 py-2 ${sidebarCollapsed ? "justify-center" : "justify-start"}`}
-          >
-            {sidebarCollapsed ? (
-              <PanelLeftOpen className="w-4 h-4" />
-            ) : (
-              <>
-                <PanelLeftClose className="w-4 h-4" />
-                <span className="text-[13px]">Collapse</span>
-              </>
-            )}
-          </Button>
         </div>
       </aside>
 
@@ -276,45 +332,138 @@ export function MainLayout() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground hover:text-foreground relative size-8"
-                >
-                  <Bell className="w-4 h-4" />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-background" />
+            <div className="relative" ref={notifRef}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-foreground relative size-8"
+                onClick={() => setNotifOpen((o) => !o)}
+              >
+                <Bell className="w-4 h-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white border-2 border-background">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </Button>
+
+              {notifOpen && (
+                <div className="absolute right-0 top-full mt-2 w-[440px] rounded-xl border bg-background shadow-xl z-50 flex flex-col overflow-hidden" style={{ maxHeight: 520 }}>
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[14px] font-semibold">Notifications</span>
+                      {unreadCount > 0 && (
+                        <span className="flex items-center justify-center h-5 min-w-[20px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1.5">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {unreadCount > 0 && (
+                        <Button
+                          variant="ghost" size="sm"
+                          className="h-7 gap-1.5 px-2 text-[12px] text-muted-foreground hover:text-foreground"
+                          onClick={() => markNotificationsRead()}
+                        >
+                          <CheckCheck className="w-3.5 h-3.5" />
+                          Mark all read
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" className="size-7" onClick={() => setNotifOpen(false)}>
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Filter tabs */}
+                  <div className="flex gap-1 px-3 py-2 border-b flex-shrink-0">
+                    {(["all", "unread"] as const).map((f) => (
+                      <button
+                        key={f}
+                        onClick={() => setNotifFilter(f)}
+                        className={`px-3 py-1 rounded-md text-[12px] font-medium transition-colors ${
+                          notifFilter === f
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        {f === "all" ? "All" : `Unread${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* List */}
+                  <div className="flex-1 overflow-y-auto">
+                    {displayedNotifs.length === 0 ? (
+                      <div className="flex flex-col items-center gap-2 py-14 text-center">
+                        <Bell className="w-8 h-8 text-muted-foreground/30" />
+                        <div className="text-[13px] font-medium">No notifications</div>
+                        <div className="text-[12px] text-muted-foreground">
+                          {notifFilter === "unread" ? "You're all caught up!" : "Nothing here yet"}
+                        </div>
+                      </div>
+                    ) : (
+                      displayedNotifs.map((n) => {
+                        const kc = kindConfig[n.kind] ?? kindConfig.system;
+                        const KindIcon = kc.icon;
+                        return (
+                          <div
+                            key={n.id}
+                            className={`group flex gap-3 px-4 py-3.5 border-b last:border-0 cursor-pointer transition-colors hover:bg-muted/40 ${n.unread ? "bg-blue-50/40" : ""}`}
+                            onClick={() => {
+                              markNotificationRead(n.id);
+                              if (n.href) { navigate(n.href); setNotifOpen(false); }
+                            }}
+                          >
+                            <div className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg ${kc.bg}`}>
+                              <KindIcon className={`w-4 h-4 ${kc.text}`} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className={`text-[13px] leading-snug ${n.unread ? "font-semibold" : "font-medium text-foreground/80"}`}>
+                                {n.title}
+                              </div>
+                              {n.detail && (
+                                <div className="mt-0.5 text-[12px] text-muted-foreground line-clamp-1">{n.detail}</div>
+                              )}
+                              <div className="mt-1 flex items-center gap-2">
+                                <span className="text-[11px] text-muted-foreground">{relativeTime(n.createdAt)}</span>
+                                <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${kc.bg} ${kc.text}`}>
+                                  {kc.label}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 flex-col items-end gap-2 pt-0.5">
+                              {n.unread && <div className="h-2 w-2 rounded-full bg-blue-500" />}
+                              <button
+                                className="opacity-0 group-hover:opacity-100 flex items-center justify-center w-5 h-5 rounded-md hover:bg-muted transition-all"
+                                onClick={(e) => { e.stopPropagation(); dismissNotification(n.id); }}
+                              >
+                                <X className="w-3 h-3 text-muted-foreground" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Footer */}
+                  {notifications.length > 0 && (
+                    <div className="border-t px-4 py-2.5 flex-shrink-0 flex items-center justify-between bg-muted/30">
+                      <span className="text-[12px] text-muted-foreground">{notifications.length} notification{notifications.length !== 1 ? "s" : ""}</span>
+                      <Button
+                        variant="ghost" size="sm"
+                        className="h-7 px-2 text-[12px] text-muted-foreground hover:text-foreground"
+                        onClick={() => notifications.forEach((n) => dismissNotification(n.id))}
+                      >
+                        Clear all
+                      </Button>
+                    </div>
                   )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72">
-                {notifications.slice(0, 6).map((n) => (
-                  <DropdownMenuItem
-                    key={n.id}
-                    className="flex-col items-start gap-0.5"
-                    onSelect={() => {
-                      if (n.href) navigate(n.href);
-                    }}
-                  >
-                    <span className="font-medium">{n.title}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {n.detail ?? new Date(n.createdAt).toLocaleString()}
-                    </span>
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={() => {
-                    markNotificationsRead();
-                    toast.success("Notifications marked as read");
-                  }}
-                >
-                  Mark all as read
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </div>
+              )}
+            </div>
 
             <Button
               variant="ghost"

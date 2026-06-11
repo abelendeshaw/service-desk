@@ -1,12 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { useTheme } from "next-themes";
 import {
-  AlertTriangle,
   Bell,
   Camera,
   CheckCircle2,
-  Database,
-  Download,
   Eye,
   EyeOff,
   Key,
@@ -18,11 +15,9 @@ import {
   Save,
   Shield,
   Sun,
-  Trash2,
   User,
 } from "lucide-react";
 
-import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import {
@@ -42,8 +37,7 @@ type Section =
   | "profile"
   | "notifications"
   | "security"
-  | "appearance"
-  | "data";
+  | "appearance";
 
 type NotifType = "email" | "push";
 
@@ -52,7 +46,6 @@ const navItems = [
   { key: "notifications" as const, icon: Bell, label: "Notifications", description: "Email and alert preferences" },
   { key: "security" as const, icon: Shield, label: "Security", description: "Password" },
   { key: "appearance" as const, icon: Palette, label: "Appearance", description: "Theme and display" },
-  { key: "data" as const, icon: Database, label: "Data & Privacy", description: "Export and deletion" },
 ];
 
 const notifItems = [
@@ -358,53 +351,6 @@ export function Settings() {
               )}
 
 
-              {activeSection === "data" && (
-                <>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Export Data</CardTitle>
-                      <CardDescription>Download your data in standard formats.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid gap-2">
-                      {["Tickets (CSV)", "Contacts (CSV)", "Companies (CSV)", "Full Backup (JSON)"].map((item) => (
-                        <div key={item} className="flex items-center justify-between rounded-md border p-3">
-                          <span>{item}</span>
-                          <Button variant="outline" size="sm">
-                            <Download data-icon="inline-start" />
-                            Export
-                          </Button>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-
-                  <Alert variant="destructive">
-                    <AlertTriangle className="size-4" />
-                    <AlertTitle>Danger Zone</AlertTitle>
-                    <AlertDescription>
-                      These actions are permanent and cannot be undone.
-                    </AlertDescription>
-                    <Separator className="my-3 bg-destructive/20" />
-                    <div className="grid gap-2">
-                      {[
-                        { label: "Delete all tickets", desc: "Permanently remove all ticket records" },
-                        { label: "Reset workspace", desc: "Clear all data and start fresh" },
-                      ].map(({ label, desc }) => (
-                        <div key={label} className="flex items-center justify-between rounded-md border border-destructive/30 bg-background/50 p-3">
-                          <div>
-                            <p className="font-medium">{label}</p>
-                            <p className="text-xs">{desc}</p>
-                          </div>
-                          <Button variant="destructive" size="sm">
-                            <Trash2 data-icon="inline-start" />
-                            Delete
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </Alert>
-                </>
-              )}
             </CardContent>
           </Card>
         </div>

@@ -223,7 +223,7 @@ export function TicketDetail() {
                 variant="outline"
                 size="sm"
                 className="h-7 gap-1.5 px-2.5 text-[12px]"
-                onClick={() => setIsEditDetailsOpen(true)}
+                onClick={() => navigate(`/tickets/${ticket.id}/edit`)}
               >
                 <Pencil className="w-3.5 h-3.5" />
                 Edit Details

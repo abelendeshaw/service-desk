@@ -37,6 +37,17 @@ type Actions = {
     initialAssignmentEngineerId: string | null;
     initialAssignmentAt: string | null;
   }): string;
+  updateTicket(input: {
+    ticketId: string;
+    subject: string;
+    description: string;
+    project: string;
+    contactName: string;
+    supportType: string;
+    priority: TicketPriority;
+    resolutionDueDate: string | null;
+    assignedEngineerIds: string[];
+  }): void;
   updateTicketStatus(input: { ticketId: string; status: TicketStatus; reason?: string }): void;
   assignTicket(input: { ticketId: string; engineerId: string }): void;
   setTicketEngineers(input: { ticketId: string; engineerIds: string[] }): void;
@@ -48,6 +59,8 @@ type Actions = {
     attachments: Attachment[];
   }): void;
   markNotificationsRead(): void;
+  markNotificationRead(id: string): void;
+  dismissNotification(id: string): void;
   convertEmailToTicket(input: { emailId: string; project: string; supportType: string }): string;
   addInboundEmail(input: {
     fromName: string;
@@ -261,6 +274,30 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
         return id;
       },
 
+      updateTicket: ({ ticketId, subject, description, project, contactName, supportType, priority, resolutionDueDate, assignedEngineerIds }) => {
+        setAndPersist((prev) => {
+          const idx = prev.tickets.findIndex((x) => x.id === ticketId);
+          if (idx === -1) return prev;
+          const t = prev.tickets[idx]!;
+          const updated: Ticket = {
+            ...t,
+            subject,
+            description,
+            project,
+            contactName,
+            supportType,
+            priority,
+            resolutionDueDate,
+            assignedEngineerIds,
+            updatedAt: new Date().toISOString(),
+          };
+          const tickets = [...prev.tickets];
+          tickets[idx] = updated;
+          return { ...prev, tickets };
+        });
+        toast.success(`Ticket #${ticketId} updated`);
+      },
+
       updateTicketStatus: ({ ticketId, status: nextStatus, reason }) => {
         setAndPersist((prev) => {
           const t = prev.tickets.find((x) => x.id === ticketId);
@@ -441,6 +478,20 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
         setAndPersist((prev) => ({
           ...prev,
           notifications: prev.notifications.map((n) => ({ ...n, unread: false })),
+        }));
+      },
+
+      markNotificationRead: (id: string) => {
+        setAndPersist((prev) => ({
+          ...prev,
+          notifications: prev.notifications.map((n) => n.id === id ? { ...n, unread: false } : n),
+        }));
+      },
+
+      dismissNotification: (id: string) => {
+        setAndPersist((prev) => ({
+          ...prev,
+          notifications: prev.notifications.filter((n) => n.id !== id),
         }));
       },
 

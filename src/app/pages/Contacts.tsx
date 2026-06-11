@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  Search, Plus, Building2, Mail, AlertCircle,
-  ArrowUpDown, CheckCircle2, Users,
+  Search, Plus, Mail, AlertCircle,
+  ArrowUpDown, CheckCircle2, Users, ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '../components/ui/alert';
@@ -22,6 +22,9 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../components/ui/table';
+import { useServiceDesk } from '../store/serviceDeskStore';
+import { calcSLAStatus, slaStatusConfig } from './SLAManagement';
+import type { SLA, SLAStatus } from '../store/types';
 
 const contactsData = [
   {
@@ -96,31 +99,50 @@ const contactsData = [
   },
 ];
 
+function matchSLAs(slas: SLA[], company: string): SLA[] {
+  const c = company.toLowerCase();
+  return slas.filter((s) => {
+    const sc = s.companyName.toLowerCase();
+    return sc === c || sc.startsWith(c + ' ');
+  });
+}
+
+function getContactSLAStatus(slas: SLA[], company: string): SLAStatus | null {
+  const matched = matchSLAs(slas, company);
+  if (matched.length === 0) return null;
+  const statuses = matched.map((s) => calcSLAStatus(s.startDate, s.endDate));
+  if (statuses.includes('Expiring Soon')) return 'Expiring Soon';
+  if (statuses.includes('Active')) return 'Active';
+  if (statuses.includes('Upcoming')) return 'Upcoming';
+  return 'Expired';
+}
+
+function getContactSLAEndDate(slas: SLA[], company: string): string | null {
+  const matched = matchSLAs(slas, company);
+  if (matched.length === 0) return null;
+  const active = matched
+    .map((s) => ({ ...s, status: calcSLAStatus(s.startDate, s.endDate) }))
+    .find((s) => s.status === 'Active' || s.status === 'Expiring Soon');
+  return active?.endDate ?? null;
+}
+
 export function Contacts() {
   const navigate = useNavigate();
+  const { slas } = useServiceDesk();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortField, setSortField] = useState<'name' | 'company' | 'tickets'>('company');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [selected, setSelected] = useState<string[]>([]);
   const [showContactModal, setShowContactModal] = useState(false);
-  const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', company: '', status: 'Active' });
-  const [companyForm, setCompanyForm] = useState({ name: '', description: '', phone: '', website: '' });
   const [savedContact, setSavedContact] = useState(false);
-  const [savedCompany, setSavedCompany] = useState(false);
 
   const updateContact = (k: string, v: string) => setContactForm((p) => ({ ...p, [k]: v }));
-  const updateCompany = (k: string, v: string) => setCompanyForm((p) => ({ ...p, [k]: v }));
 
   const handleSaveContact = () => {
     setSavedContact(true);
     setTimeout(() => { setSavedContact(false); setShowContactModal(false); setContactForm({ name: '', email: '', phone: '', company: '', status: 'Active' }); }, 1000);
-  };
-
-  const handleSaveCompany = () => {
-    setSavedCompany(true);
-    setTimeout(() => { setSavedCompany(false); setShowCompanyModal(false); setCompanyForm({ name: '', description: '', phone: '', website: '' }); }, 1000);
   };
 
   const toggleSort = (field: typeof sortField) => {
@@ -129,7 +151,6 @@ export function Contacts() {
   };
 
   const companies = [...new Set(contactsData.map((c) => c.company))];
-
   const filtered = contactsData
     .filter((c) => {
       if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.email.includes(search.toLowerCase()) && !c.company.toLowerCase().includes(search.toLowerCase())) return false;
@@ -157,10 +178,6 @@ export function Contacts() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5 text-[13px]" onClick={() => setShowCompanyModal(true)}>
-              <Building2 className="w-3.5 h-3.5" />
-              New Company
-            </Button>
             <Button size="sm" className="gap-1.5 text-[13px]" onClick={() => setShowContactModal(true)}>
               <Plus className="w-3.5 h-3.5" />
               New Contact
@@ -220,6 +237,11 @@ export function Contacts() {
               <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Email</TableHead>
               <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
               <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" /> SLA
+                </div>
+              </TableHead>
+              <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <div className="flex cursor-pointer items-center gap-1 hover:text-foreground" onClick={() => toggleSort('tickets')}>
                   Tickets <ArrowUpDown className="w-3 h-3" />
                 </div>
@@ -273,6 +295,25 @@ export function Contacts() {
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-3.5">
+                    {(() => {
+                      const slaStatus = getContactSLAStatus(slas, contact.company);
+                      const endDate = getContactSLAEndDate(slas, contact.company);
+                      if (!slaStatus) return <span className="text-[12px] text-muted-foreground">—</span>;
+                      const cfg = slaStatusConfig[slaStatus];
+                      return (
+                        <div>
+                          <Badge variant="outline" className={`gap-1 text-[11px] ${cfg.badgeClass}`}>
+                            <span className={`size-1.5 rounded-full ${cfg.dotClass}`} />
+                            {slaStatus}
+                          </Badge>
+                          {endDate && (
+                            <div className="mt-0.5 text-[11px] text-muted-foreground">until {endDate}</div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </TableCell>
+                  <TableCell className="px-4 py-3.5">
                     <div className="flex items-center gap-2">
                       <span className="text-[13px] font-semibold">{contact.tickets}</span>
                       <span className="text-[11px] text-muted-foreground">total</span>
@@ -292,7 +333,7 @@ export function Contacts() {
             })}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="py-16 text-center">
+                <TableCell colSpan={8} className="py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <AlertCircle className="w-8 h-8 text-muted-foreground" />
                     <div>
@@ -383,52 +424,6 @@ export function Contacts() {
         </DialogContent>
       </Dialog>
 
-      {/* New Company Modal */}
-      <Dialog open={showCompanyModal} onOpenChange={setShowCompanyModal}>
-        <DialogContent className="max-w-md p-0 overflow-hidden">
-          <DialogHeader className="border-b px-5 py-4">
-            <DialogTitle className="flex items-center gap-2.5 text-[14px]">
-              <span className="flex size-7 items-center justify-center rounded-md bg-primary/10">
-                <Building2 className="w-4 h-4 text-primary" />
-              </span>
-              New Company
-            </DialogTitle>
-            <DialogDescription className="text-[11px]">Register a new client company</DialogDescription>
-          </DialogHeader>
-          <div className="p-5 space-y-4">
-            <div>
-              <Label className="mb-1.5 block text-[12px]">Company Name <span className="text-red-500">*</span></Label>
-              <Input value={companyForm.name} onChange={(e) => updateCompany('name', e.target.value)} placeholder="e.g. EPSS, Abay Bank" className="h-9 text-[13px]" />
-            </div>
-            <div>
-              <Label className="mb-1.5 block text-[12px]">Description</Label>
-              <Input value={companyForm.description} onChange={(e) => updateCompany('description', e.target.value)} placeholder="Brief description" className="h-9 text-[13px]" />
-            </div>
-            <div>
-              <Label className="mb-1.5 block text-[12px]">Phone</Label>
-              <Input value={companyForm.phone} onChange={(e) => updateCompany('phone', e.target.value)} placeholder="+251 11 000 0000" className="h-9 text-[13px]" />
-            </div>
-            <div>
-              <Label className="mb-1.5 block text-[12px]">Website</Label>
-              <Input value={companyForm.website} onChange={(e) => updateCompany('website', e.target.value)} placeholder="https://company.gov.et" className="h-9 text-[13px]" />
-            </div>
-          </div>
-          {savedCompany && (
-            <div className="px-5 pb-2">
-              <Alert className="border-primary bg-primary text-primary-foreground [&>svg]:text-primary-foreground">
-                <CheckCircle2 className="h-4 w-4" />
-                <AlertDescription>Company created successfully</AlertDescription>
-              </Alert>
-            </div>
-          )}
-          <div className="flex items-center justify-between border-t bg-muted/40 px-5 py-4">
-            <Button variant="outline" size="sm" className="text-[13px]" onClick={() => setShowCompanyModal(false)}>Cancel</Button>
-            <Button size="sm" className="text-[13px]" onClick={handleSaveCompany} disabled={!companyForm.name}>
-              Create Company
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

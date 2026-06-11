@@ -330,7 +330,7 @@ export const seedSLAs: SLA[] = [
     id: "SLA-002",
     createdAt: "2026-01-15T00:00:00.000Z",
     updatedAt: "2026-01-15T00:00:00.000Z",
-    companyName: "IE Innovation Ethiopia",
+    companyName: "IE",
     projectName: "IE Managed Services",
     startDate: "2026-01-15",
     endDate: "2026-06-14",

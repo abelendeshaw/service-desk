@@ -319,7 +319,7 @@ export function Tickets() {
                     <RowActionsMenu
                       entityName={ticket.id}
                       onView={() => navigate(`/tickets/${ticket.id}`)}
-                      onEdit={() => toast.info(`Edit ${ticket.id} coming soon`)}
+                      onEdit={() => navigate(`/tickets/${ticket.id}/edit`)}
                       onDelete={() => toast.success(`${ticket.id} deleted`)}
                     />
                   </TableCell>

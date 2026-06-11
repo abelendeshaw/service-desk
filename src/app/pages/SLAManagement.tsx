@@ -873,6 +873,7 @@ export function SLAManagement() {
   const [importOpen, setImportOpen] = useState(false);
   const [editingSLA, setEditingSLA] = useState<SLA | null>(null);
   const [activeTab, setActiveTab] = useState<'sla' | 'email'>('sla');
+  const [selected, setSelected] = useState<string[]>([]);
 
   const companies = useMemo(() => Array.from(new Set(slas.map((s) => s.companyName))).sort(), [slas]);
   const years = useMemo(() => {
@@ -916,6 +917,10 @@ export function SLAManagement() {
   };
 
   const hasFilters = search || statusFilter !== 'all' || supportTypeFilter !== 'all' || companyFilter !== 'all' || yearFilter !== 'all';
+
+  const toggleSelect = (id: string) =>
+    setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  const allSelected = filtered.length > 0 && selected.length === filtered.length;
 
   return (
     <div className="flex h-full flex-col bg-muted/30">
@@ -1028,6 +1033,12 @@ export function SLAManagement() {
               <Table>
                 <TableHeader className="sticky top-0 z-10 bg-background">
                   <TableRow>
+                    <TableHead className="w-10 pl-5 py-3">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={(checked) => setSelected(checked ? filtered.map((s) => s.id) : [])}
+                      />
+                    </TableHead>
                     <TableHead className="pl-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground w-[100px]">ID</TableHead>
                     <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       <div className="flex cursor-pointer items-center gap-1 hover:text-foreground" onClick={() => toggleSort('companyName')}>
@@ -1060,7 +1071,10 @@ export function SLAManagement() {
                     const isExpiring = s.status === 'Expiring Soon';
                     const isExpired = s.status === 'Expired';
                     return (
-                      <TableRow key={s.id} className="group cursor-pointer" onClick={() => navigate(`/sla/${s.id}`)}>
+                      <TableRow key={s.id} className="group cursor-pointer" data-state={selected.includes(s.id) ? 'selected' : undefined} onClick={() => navigate(`/sla/${s.id}`)}>
+                        <TableCell className="w-10 pl-5 py-3.5" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox checked={selected.includes(s.id)} onCheckedChange={() => toggleSelect(s.id)} />
+                        </TableCell>
                         <TableCell className="pl-5 py-3.5">
                           <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">{s.id}</span>
                         </TableCell>
@@ -1118,7 +1132,7 @@ export function SLAManagement() {
                   })}
                   {filtered.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={10} className="py-16 text-center">
+                      <TableCell colSpan={11} className="py-16 text-center">
                         <div className="flex flex-col items-center gap-3">
                           <FileText className="w-8 h-8 text-muted-foreground" />
                           <div>
@@ -1141,10 +1155,24 @@ export function SLAManagement() {
 
             {/* Footer */}
             <div className="flex shrink-0 items-center justify-between border-t bg-background px-6 py-3">
-              <span className="text-[12px] text-muted-foreground">Showing {filtered.length} of {total} SLAs</span>
-              <Button variant="outline" size="sm" className="gap-1.5 text-[12px] h-7 px-2.5" onClick={() => exportSLAsToExcel(filtered)}>
-                <Download className="w-3 h-3" />Export all
-              </Button>
+              <span className="text-[12px] text-muted-foreground">
+                {selected.length > 0
+                  ? `${selected.length} of ${filtered.length} selected`
+                  : `Showing ${filtered.length} of ${total} SLAs`}
+              </span>
+              {selected.length > 0 && (
+                <Button
+                  variant="outline" size="sm"
+                  className="gap-1.5 text-[12px] h-7 px-2.5"
+                  onClick={() => {
+                    const toExport = filtered.filter((s) => selected.includes(s.id));
+                    exportSLAsToExcel(toExport);
+                  }}
+                >
+                  <Download className="w-3 h-3" />
+                  Export {selected.length} SLA{selected.length !== 1 ? 's' : ''}
+                </Button>
+              )}
             </div>
           </>
         ) : (

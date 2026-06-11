@@ -5,6 +5,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { Tickets } from "./pages/Tickets";
 import { TicketDetail } from "./pages/TicketDetail";
 import { CreateTicket } from "./pages/CreateTicket";
+import { EditTicket } from "./pages/EditTicket";
 import { Contacts } from "./pages/Contacts";
 import { ContactDetail } from "./pages/ContactDetail";
 import { Employees } from "./pages/Employees";
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
       { index: true, Component: Dashboard },
       { path: "tickets", Component: Tickets },
       { path: "tickets/:id", Component: TicketDetail },
+      { path: "tickets/:id/edit", Component: EditTicket },
       { path: "tickets/new", Component: CreateTicket },
       { path: "contacts", Component: Contacts },
       { path: "contacts/:id", Component: ContactDetail },
