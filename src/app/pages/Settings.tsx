@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useTheme } from "next-themes";
 import {
-  Bell,
   Camera,
   CheckCircle2,
   Eye,
@@ -29,49 +28,23 @@ import {
 } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Separator } from "../components/ui/separator";
 import { Switch } from "../components/ui/switch";
-import { useServiceDesk } from "../store/serviceDeskStore";
 
-type Section =
-  | "profile"
-  | "notifications"
-  | "security"
-  | "appearance";
-
-type NotifType = "email" | "push";
+type Section = "profile" | "security" | "appearance";
 
 const navItems = [
   { key: "profile" as const, icon: User, label: "Profile", description: "Personal information" },
-  { key: "notifications" as const, icon: Bell, label: "Notifications", description: "Email and alert preferences" },
   { key: "security" as const, icon: Shield, label: "Security", description: "Password" },
   { key: "appearance" as const, icon: Palette, label: "Appearance", description: "Theme and display" },
 ];
 
-const notifItems = [
-  { key: "new_ticket", label: "New Ticket Created", description: "When a new ticket is submitted", email: true, push: true },
-  { key: "ticket_assigned", label: "Ticket Assigned to Me", description: "When a ticket is assigned to your account", email: true, push: true },
-  { key: "ticket_resolved", label: "Ticket Resolved", description: "When a ticket you created is resolved", email: true, push: false },
-  { key: "team_updates", label: "Team Updates", description: "Changes within your assigned teams", email: false, push: false },
-  { key: "weekly_report", label: "Weekly Performance Report", description: "Summary delivered every Monday", email: true, push: false },
-  { key: "sla_breach", label: "SLA Breach Alert", description: "When a ticket violates SLA thresholds", email: true, push: true },
-];
-
 export function Settings() {
   const { theme, setTheme } = useTheme();
-  const { resetToSeed } = useServiceDesk();
   const [activeSection, setActiveSection] = useState<Section>("profile");
   const [showPassword, setShowPassword] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [notifState, setNotifState] = useState<Record<string, { email: boolean; push: boolean }>>(
-    Object.fromEntries(notifItems.map((item) => [item.key, { email: item.email, push: item.push }]))
-  );
 
   const activeNav = useMemo(() => navItems.find((n) => n.key === activeSection)!, [activeSection]);
-
-  const toggleNotif = (key: string, type: NotifType) => {
-    setNotifState((prev) => ({ ...prev, [key]: { ...prev[key], [type]: !prev[key][type] } }));
-  };
 
   const handleSave = () => {
     setSaved(true);
@@ -105,24 +78,6 @@ export function Settings() {
         </Card>
 
         <div className="flex-1">
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-[14px]">Demo Data</CardTitle>
-              <CardDescription>Reload seeded projects/tickets/articles (clears saved local data).</CardDescription>
-            </CardHeader>
-            <CardContent className="flex items-center justify-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  resetToSeed();
-                  window.location.reload();
-                }}
-              >
-                Reset demo data
-              </Button>
-            </CardContent>
-          </Card>
-
           <Card>
             <CardHeader className="flex-row items-center justify-between gap-4">
               <div className="space-y-1">
@@ -227,79 +182,36 @@ export function Settings() {
                 </>
               )}
 
-              {activeSection === "notifications" && (
+              {activeSection === "security" && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Notification Preferences</CardTitle>
-                    <CardDescription>Control which events send email or push notifications.</CardDescription>
+                    <CardTitle className="text-base">Change Password</CardTitle>
                   </CardHeader>
                   <CardContent className="grid gap-3">
-                    {notifItems.map((item) => (
-                      <div key={item.key} className="grid grid-cols-3 items-center gap-4 rounded-md border p-3">
-                        <div>
-                          <p className="font-medium">{item.label}</p>
-                          <p className="text-xs text-muted-foreground">{item.description}</p>
-                        </div>
-                        <div className="mx-auto flex items-center gap-2">
-                          <Label htmlFor={`${item.key}-email`} className="text-xs text-muted-foreground">
-                            Email
-                          </Label>
-                          <Switch
-                            id={`${item.key}-email`}
-                            checked={notifState[item.key].email}
-                            onCheckedChange={() => toggleNotif(item.key, "email")}
+                    {["Current Password", "New Password", "Confirm New Password"].map((label) => (
+                      <div key={label} className="grid gap-1.5">
+                        <Label>{label}</Label>
+                        <div className="relative">
+                          <Key className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="********"
+                            className="pl-9 pr-10"
                           />
-                        </div>
-                        <div className="mx-auto flex items-center gap-2">
-                          <Label htmlFor={`${item.key}-push`} className="text-xs text-muted-foreground">
-                            Push
-                          </Label>
-                          <Switch
-                            id={`${item.key}-push`}
-                            checked={notifState[item.key].push}
-                            onCheckedChange={() => toggleNotif(item.key, "push")}
-                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 size-7 -translate-y-1/2"
+                            onClick={() => setShowPassword((prev) => !prev)}
+                          >
+                            {showPassword ? <EyeOff /> : <Eye />}
+                          </Button>
                         </div>
                       </div>
                     ))}
+                    <Button>Update Password</Button>
                   </CardContent>
                 </Card>
-              )}
-
-              {activeSection === "security" && (
-                <>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Change Password</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid gap-3">
-                      {["Current Password", "New Password", "Confirm New Password"].map((label) => (
-                        <div key={label} className="grid gap-1.5">
-                          <Label>{label}</Label>
-                          <div className="relative">
-                            <Key className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                              type={showPassword ? "text" : "password"}
-                              placeholder="********"
-                              className="pl-9 pr-10"
-                            />
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="absolute right-1 top-1/2 size-7 -translate-y-1/2"
-                              onClick={() => setShowPassword((prev) => !prev)}
-                            >
-                              {showPassword ? <EyeOff /> : <Eye />}
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                      <Button>Update Password</Button>
-                    </CardContent>
-                  </Card>
-
-
-                </>
               )}
 
               {activeSection === "appearance" && (
@@ -349,7 +261,6 @@ export function Settings() {
                   </Card>
                 </>
               )}
-
 
             </CardContent>
           </Card>
