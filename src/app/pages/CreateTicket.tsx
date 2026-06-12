@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, AlertCircle, ChevronRight, Info, Users, Building2, Tag, Calendar, AlignLeft } from 'lucide-react';
 import { useServiceDesk } from '../store/serviceDeskStore';
+import { useAuth } from '../store/authStore';
 
 const steps = ['Basic Info', 'Assignment', 'Review'];
 
 export function CreateTicket() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { engineers, createTicket } = useServiceDesk();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
@@ -369,6 +371,14 @@ export function CreateTicket() {
                   ],
                   initialAssignmentEngineerId: form.fieldEngineerId || null,
                   initialAssignmentAt: null,
+                  createdBy: user
+                    ? {
+                        name: user.name,
+                        email: user.email,
+                        initials: user.initials,
+                        role: user.role === 'staff' ? 'Support Coordinator' : 'Client Contact',
+                      }
+                    : undefined,
                 });
                 navigate(`/tickets/${id}`);
               }}

@@ -220,7 +220,7 @@ export function Dashboard() {
       <div className="grid grid-cols-2 gap-4">
         <Card
           className="cursor-pointer transition-all hover:shadow-md"
-          onClick={() => navigate('/client-dashboard')}
+          onClick={() => navigate('/login', { state: { portal: 'client' } })}
         >
           <CardContent className="flex items-center gap-4 p-4">
             <div className="flex size-10 items-center justify-center rounded-lg bg-violet-50">

@@ -45,6 +45,7 @@ import {
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useServiceDesk } from "../store/serviceDeskStore";
+import { useAuth } from "../store/authStore";
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -95,6 +96,7 @@ export function MainLayout() {
   const [notifFilter, setNotifFilter] = useState<"all" | "unread">("all");
   const notifRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const { notifications, markNotificationsRead, markNotificationRead, dismissNotification } = useServiceDesk();
   const unreadCount = notifications.filter((n) => n.unread).length;
   const displayedNotifs = notifFilter === "unread" ? notifications.filter((n) => n.unread) : notifications;
@@ -111,8 +113,9 @@ export function MainLayout() {
 
   const confirmLogout = () => {
     setLogoutOpen(false);
+    logout();
     toast.success("Logged out successfully");
-    navigate("/login");
+    navigate("/login", { state: { portal: "staff" } });
   };
 
   return (
@@ -482,14 +485,14 @@ export function MainLayout() {
                   className="h-auto gap-2 px-0 hover:bg-transparent"
                 >
                   <div className="bg-primary text-primary-foreground flex size-7 items-center justify-center rounded-full text-xs font-semibold">
-                    AT
+                    {user?.initials ?? "AT"}
                   </div>
                   <div className="text-left hidden sm:block">
                     <div className="text-foreground text-[13px] font-medium leading-tight">
-                      Abraham Tayu
+                      {user?.name ?? "Abraham Tayu"}
                     </div>
                     <div className="text-muted-foreground text-[11px] leading-tight">
-                      Admin
+                      {user?.jobTitle ?? "Admin"}
                     </div>
                   </div>
                 </Button>

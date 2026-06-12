@@ -1,6 +1,23 @@
-import type { EmailThread, Engineer, SLA, Ticket } from "./types";
+import type { ClientArticle, EmailThread, Engineer, Role, SLA, Ticket } from "./types";
 
 const now = () => new Date().toISOString();
+
+function defaultCreatedBy(contactName: string, email = ""): Ticket["createdBy"] {
+  const parts = contactName.trim().split(/\s+/).filter(Boolean);
+  return {
+    name: contactName,
+    email,
+    initials: ((parts[0]?.[0] ?? "C") + (parts[1]?.[0] ?? parts[0]?.[1] ?? "")).toUpperCase(),
+    role: "Client Contact" as Role,
+  };
+}
+
+function withCreator(ticket: Omit<Ticket, "createdBy"> & { createdBy?: Ticket["createdBy"] }): Ticket {
+  return {
+    ...ticket,
+    createdBy: ticket.createdBy ?? defaultCreatedBy(ticket.contactName),
+  };
+}
 
 export const seedEngineers: Engineer[] = [
   { id: "eng-ww", name: "Wongel Wondyifraw", initials: "WW", email: "wongel@ienetworks.co" },
@@ -10,7 +27,7 @@ export const seedEngineers: Engineer[] = [
   { id: "eng-md", name: "Mebrate Degu", initials: "MD", email: "mebrate@ienetworks.co" },
 ];
 
-export const seedTickets: Ticket[] = [
+const rawSeedTickets: Omit<Ticket, "createdBy">[] = [
   {
     id: "00135",
     createdAt: "2026-02-06T09:00:00.000Z",
@@ -265,6 +282,8 @@ export const seedTickets: Ticket[] = [
   },
 ];
 
+export const seedTickets: Ticket[] = rawSeedTickets.map(withCreator);
+
 export const seedEmailThreads: EmailThread[] = [
   {
     id: "EM-001",
@@ -395,6 +414,51 @@ export const seedSLAs: SLA[] = [
     startDate: "2025-10-01",
     endDate: "2026-03-31",
     notes: "Data centre co-location and support services — expired contract pending renewal.",
+  },
+];
+
+export const seedClientArticles: ClientArticle[] = [
+  {
+    id: "ca-001",
+    company: "EPSS",
+    authorId: "client-1",
+    authorName: "Alemu Bekele",
+    title: "How to reset your network credentials",
+    category: "Network",
+    content:
+      "If you are locked out of the corporate network, contact the helpdesk first. For routine password resets, use the self-service portal at portal.epss.local and follow the verification steps sent to your registered mobile number.",
+    status: "Published",
+    createdAt: "2026-01-10T09:00:00.000Z",
+    updatedAt: "2026-02-15T11:30:00.000Z",
+    views: 142,
+  },
+  {
+    id: "ca-002",
+    company: "EPSS",
+    authorId: "client-1",
+    authorName: "Alemu Bekele",
+    title: "FortiGate VPN setup guide",
+    category: "VPN",
+    content:
+      "Download the FortiClient VPN application, import the EPSS gateway profile, and authenticate with your AD credentials. Ensure split tunneling is enabled for internal resources only.",
+    status: "Published",
+    createdAt: "2026-01-18T14:00:00.000Z",
+    updatedAt: "2026-03-01T08:45:00.000Z",
+    views: 98,
+  },
+  {
+    id: "ca-003",
+    company: "EPSS",
+    authorId: "client-1",
+    authorName: "Alemu Bekele",
+    title: "Escalation process explained",
+    category: "Process",
+    content:
+      "Critical incidents are escalated automatically after 2 hours without resolution. For high-priority issues, your account manager and IE Networks NOC are notified in parallel.",
+    status: "Draft",
+    createdAt: "2026-02-20T10:00:00.000Z",
+    updatedAt: "2026-02-20T10:00:00.000Z",
+    views: 12,
   },
 ];
 

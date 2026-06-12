@@ -1,5 +1,7 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import { MainLayout } from "./components/MainLayout";
+import { ClientLayout } from "./components/ClientLayout";
+import { RequireStaff } from "./components/RequireAuth";
 import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
 import { Tickets } from "./pages/Tickets";
@@ -25,12 +27,41 @@ import { Reports } from "./pages/Reports";
 import { ReportDetail } from "./pages/ReportDetail";
 import { ClientDashboard } from "./pages/ClientDashboard";
 import { EngineerDashboard } from "./pages/EngineerDashboard";
+import { ClientTickets } from "./pages/client/ClientTickets";
+import { ClientCreateTicket } from "./pages/client/ClientCreateTicket";
+import { ClientTicketDetail } from "./pages/client/ClientTicketDetail";
+import { ClientKnowledgeBase } from "./pages/client/ClientKnowledgeBase";
+import { ClientCreateArticle } from "./pages/client/ClientCreateArticle";
+import { ClientArticleDetail } from "./pages/client/ClientArticleDetail";
+import { ClientAccount } from "./pages/client/ClientAccount";
+
+function StaffShell() {
+  return (
+    <RequireStaff>
+      <MainLayout />
+    </RequireStaff>
+  );
+}
 
 export const router = createBrowserRouter([
   { path: "/login", Component: Login },
   {
+    path: "/client",
+    Component: ClientLayout,
+    children: [
+      { index: true, Component: ClientDashboard },
+      { path: "tickets", Component: ClientTickets },
+      { path: "tickets/new", Component: ClientCreateTicket },
+      { path: "tickets/:id", Component: ClientTicketDetail },
+      { path: "knowledge", Component: ClientKnowledgeBase },
+      { path: "knowledge/new", Component: ClientCreateArticle },
+      { path: "knowledge/:id", Component: ClientArticleDetail },
+      { path: "account", Component: ClientAccount },
+    ],
+  },
+  {
     path: "/",
-    Component: MainLayout,
+    Component: StaffShell,
     children: [
       { index: true, Component: Dashboard },
       { path: "tickets", Component: Tickets },
@@ -54,7 +85,7 @@ export const router = createBrowserRouter([
       { path: "email-support/:id", Component: EmailSupportDetail },
       { path: "reports", Component: Reports },
       { path: "reports/:id", Component: ReportDetail },
-      { path: "client-dashboard", Component: ClientDashboard },
+      { path: "client-dashboard", element: <Navigate to="/client" replace /> },
       { path: "engineer-dashboard", Component: EngineerDashboard },
       { path: "settings", Component: Settings },
     ],

@@ -9,38 +9,14 @@ import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { useServiceDesk } from '../store/serviceDeskStore';
-import type { SLA, SLAStatus } from '../store/types';
-import { calcSLAStatus, calcSupportType } from './SLAManagement';
+import { getTicketSupportType, supportTypeBadgeClass } from '../lib/ticketSupportType';
 
 const avatarColors = ['#7c3aed', '#1d4ed8', '#0891b2', '#059669', '#d97706', '#dc2626'];
 
 const supportTypeConfig: Record<string, { badgeClass: string }> = {
-  CSAT: { badgeClass: 'bg-red-50 text-red-700 border-red-200' },
-  'Normal Support': { badgeClass: 'bg-blue-50 text-blue-700 border-blue-200' },
+  CSAT: { badgeClass: supportTypeBadgeClass.CSAT },
+  'Normal Support': { badgeClass: supportTypeBadgeClass['Normal Support'] },
 };
-
-function matchSLAs(slas: SLA[], company: string): SLA[] {
-  const c = company.toLowerCase();
-  return slas.filter((s) => {
-    const sc = s.companyName.toLowerCase();
-    return sc === c || sc.startsWith(c + ' ');
-  });
-}
-
-function getProjectSLAStatus(slas: SLA[], project: string): SLAStatus | null {
-  const matched = matchSLAs(slas, project);
-  if (matched.length === 0) return null;
-  const statuses = matched.map((s) => calcSLAStatus(s.startDate, s.endDate));
-  if (statuses.includes('Expiring Soon')) return 'Expiring Soon';
-  if (statuses.includes('Active')) return 'Active';
-  if (statuses.includes('Upcoming')) return 'Upcoming';
-  return 'Expired';
-}
-
-function getTicketSupportType(slas: SLA[], project: string): string {
-  const status = getProjectSLAStatus(slas, project);
-  return status ? calcSupportType(status) : 'Normal Support';
-}
 
 export function KnowledgeBase() {
   const { project } = useParams<{ project?: string }>();

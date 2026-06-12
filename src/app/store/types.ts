@@ -98,6 +98,12 @@ export type Ticket = {
   comments: TicketComment[];
   activity: TicketActivity[];
   source: { type: "manual" } | { type: "email"; emailId: string };
+  createdBy: {
+    name: string;
+    email: string;
+    initials: string;
+    role: Role;
+  };
 };
 
 export type EmailStatus = "Open" | "Pending" | "Closed";
@@ -167,5 +173,34 @@ export type SLA = {
   startDate: string;
   endDate: string;
   notes: string;
+};
+
+export type ClientArticleStatus = "Draft" | "Published";
+
+export type ClientArticle = {
+  id: string;
+  company: string;
+  authorId: string;
+  authorName: string;
+  title: string;
+  category: string;
+  content: string;
+  status: ClientArticleStatus;
+  createdAt: string;
+  updatedAt: string;
+  views: number;
+};
+
+export type UserRole = "staff" | "client";
+
+export type AuthUser = {
+  id: string;
+  name: string;
+  email: string;
+  initials: string;
+  role: UserRole;
+  company: string;
+  phone?: string;
+  jobTitle?: string;
 };
 

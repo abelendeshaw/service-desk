@@ -1,8 +1,10 @@
 import React from "react";
 import { toast } from "sonner";
-import { seedEmailThreads, seedEngineers, seedNotifications, seedSLAs, seedTickets } from "./seed";
+import { seedClientArticles, seedEmailThreads, seedEngineers, seedNotifications, seedSLAs, seedTickets } from "./seed";
 import type {
   Attachment,
+  ClientArticle,
+  ClientArticleStatus,
   EmailThread,
   Engineer,
   EscalationTarget,
@@ -21,6 +23,7 @@ type State = {
   emailThreads: EmailThread[];
   notifications: Notification[];
   ticketArticles: Record<string, TicketArticle>;
+  clientArticles: ClientArticle[];
   slas: SLA[];
 };
 
@@ -36,6 +39,7 @@ type Actions = {
     issues: Array<{ title: string; description: string; attachments: Attachment[] }>;
     initialAssignmentEngineerId: string | null;
     initialAssignmentAt: string | null;
+    createdBy?: Ticket["createdBy"];
   }): string;
   updateTicket(input: {
     ticketId: string;
@@ -57,6 +61,7 @@ type Actions = {
     body: string;
     internal: boolean;
     attachments: Attachment[];
+    author?: { name: string; initials: string; role: "Client Contact" | "Field Engineer" | "Support Coordinator" | "System" };
   }): void;
   markNotificationsRead(): void;
   markNotificationRead(id: string): void;
@@ -84,6 +89,23 @@ type Actions = {
   updateSLA(input: { id: string; companyName: string; projectName: string; startDate: string; endDate: string; notes: string }): void;
   deleteSLA(id: string): void;
   importSLAs(rows: Array<{ companyName: string; projectName: string; startDate: string; endDate: string }>): number;
+  createClientArticle(input: {
+    company: string;
+    authorId: string;
+    authorName: string;
+    title: string;
+    category?: string;
+    content: string;
+    status: ClientArticleStatus;
+  }): string;
+  updateClientArticle(input: {
+    id: string;
+    title: string;
+    category: string;
+    content: string;
+    status: ClientArticleStatus;
+  }): void;
+  incrementClientArticleViews(id: string): void;
 };
 
 type Store = State & Actions;
@@ -110,27 +132,38 @@ function canTransition(from: TicketStatus, to: TicketStatus) {
   return allowed[from].includes(to);
 }
 
+function normalizeTicket(ticket: Ticket & { createdBy?: Ticket["createdBy"] }): Ticket {
+  const assignedEngineerIds =
+    Array.isArray(ticket.assignedEngineerIds) && ticket.assignedEngineerIds.length > 0
+      ? ticket.assignedEngineerIds
+      : ticket.assignedEngineerId
+        ? [ticket.assignedEngineerId]
+        : [];
+  const createdBy =
+    ticket.createdBy ??
+    ({
+      name: ticket.contactName,
+      email: "",
+      initials: initials(ticket.contactName),
+      role: "Client Contact",
+    } satisfies Ticket["createdBy"]);
+  return { ...ticket, assignedEngineerIds, createdBy };
+}
+
 function loadInitialState(): State {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) throw new Error("no-store");
     const parsed = JSON.parse(raw) as State;
     if (!parsed?.tickets || !parsed?.emailThreads || !parsed?.engineers) throw new Error("invalid-store");
-    const normalizedTickets = parsed.tickets.map((ticket) => ({
-      ...ticket,
-      assignedEngineerIds:
-        Array.isArray((ticket as Ticket & { assignedEngineerIds?: string[] }).assignedEngineerIds)
-          ? (ticket as Ticket & { assignedEngineerIds?: string[] }).assignedEngineerIds!
-          : ticket.assignedEngineerId
-            ? [ticket.assignedEngineerId]
-            : [],
-    }));
+    const normalizedTickets = parsed.tickets.map((ticket) => normalizeTicket(ticket as Ticket));
     return {
       engineers: parsed.engineers,
       tickets: normalizedTickets,
       emailThreads: parsed.emailThreads,
       notifications: parsed.notifications ?? [],
       ticketArticles: parsed.ticketArticles ?? {},
+      clientArticles: (parsed as State).clientArticles ?? seedClientArticles,
       slas: (parsed as State).slas ?? seedSLAs,
     };
   } catch {
@@ -154,6 +187,7 @@ function loadInitialState(): State {
       emailThreads: seedEmailThreads,
       notifications: seedNotifications,
       ticketArticles: seedTicketArticles,
+      clientArticles: seedClientArticles,
       slas: seedSLAs,
     };
   }
@@ -194,7 +228,14 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
         const id = String(Math.floor(10000 + Math.random() * 89999)).slice(-5);
         const now = new Date().toISOString();
         const assignedAt = input.initialAssignmentEngineerId ? (input.initialAssignmentAt ?? now) : null;
-        const createdBy = { name: input.contactName, initials: initials(input.contactName), role: "Client Contact" as const };
+        const createdBy =
+          input.createdBy ??
+          ({
+            name: input.contactName,
+            email: "",
+            initials: initials(input.contactName),
+            role: "Client Contact",
+          } satisfies Ticket["createdBy"]);
         const newTicket: Ticket = {
           id,
           createdAt: now,
@@ -228,6 +269,7 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
             },
           ],
           source: { type: "manual" },
+          createdBy,
         };
 
         setAndPersist((prev) => {
@@ -437,12 +479,13 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
         });
       },
 
-      addTicketComment: ({ ticketId, body, internal, attachments }) => {
+      addTicketComment: ({ ticketId, body, internal, attachments, author }) => {
         setAndPersist((prev) => {
           const t = prev.tickets.find((x) => x.id === ticketId);
           if (!t) return prev;
           const now = new Date().toISOString();
           const commentId = uid("cmt");
+          const commentAuthor = author ?? { name: "Field Engineer", initials: "FE", role: "Field Engineer" as const };
           const updated: Ticket = {
             ...t,
             updatedAt: now,
@@ -450,7 +493,7 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
               {
                 id: commentId,
                 createdAt: now,
-                author: { name: "Field Engineer", initials: "FE", role: "Field Engineer" },
+                author: commentAuthor,
                 body,
                 internal,
                 attachments,
@@ -543,6 +586,12 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
               },
             ],
             source: { type: "email", emailId },
+            createdBy: {
+              name: first?.from.name ?? "Client Contact",
+              email: first?.from.email ?? "",
+              initials: first?.from.initials ?? "CC",
+              role: "Client Contact",
+            },
           };
 
           const updatedThread: EmailThread = {
@@ -746,6 +795,52 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
         if (imported > 0) toast.success(`Imported ${imported} SLA${imported !== 1 ? "s" : ""}`);
         else toast.warning("No new SLAs imported (duplicates skipped)");
         return imported;
+      },
+
+      createClientArticle: ({ company, authorId, authorName, title, category = "General", content, status }) => {
+        const id = uid("ca");
+        const now = new Date().toISOString();
+        setAndPersist((prev) => ({
+          ...prev,
+          clientArticles: [
+            {
+              id,
+              company,
+              authorId,
+              authorName,
+              title,
+              category,
+              content,
+              status,
+              createdAt: now,
+              updatedAt: now,
+              views: 0,
+            },
+            ...prev.clientArticles,
+          ],
+        }));
+        toast.success("Article created");
+        return id;
+      },
+
+      updateClientArticle: ({ id, title, category, content, status }) => {
+        const now = new Date().toISOString();
+        setAndPersist((prev) => ({
+          ...prev,
+          clientArticles: prev.clientArticles.map((a) =>
+            a.id === id ? { ...a, title, category, content, status, updatedAt: now } : a,
+          ),
+        }));
+        toast.success("Article saved");
+      },
+
+      incrementClientArticleViews: (id) => {
+        setAndPersist((prev) => ({
+          ...prev,
+          clientArticles: prev.clientArticles.map((a) =>
+            a.id === id ? { ...a, views: a.views + 1 } : a,
+          ),
+        }));
       },
     }),
     [notify, setAndPersist],

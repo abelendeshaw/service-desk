@@ -5,7 +5,7 @@ declare global {
     FS?: (...args: unknown[]) => void;
   }
 }
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import {
   Ticket,
   Eye,
@@ -14,13 +14,17 @@ import {
   Shield,
   Zap,
   BarChart3,
+  MonitorSmartphone,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Checkbox } from '../components/ui/checkbox';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Separator } from '../components/ui/separator';
+import { useAuth } from '../store/authStore';
+import type { UserRole } from '../store/types';
 
 const features = [
   {
@@ -53,17 +57,34 @@ const stats = [
 
 export function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const location = useLocation();
+  const { login, user } = useAuth();
+  const initialPortal = (location.state as { portal?: UserRole } | null)?.portal ?? 'staff';
+  const [portal, setPortal] = useState<UserRole>(initialPortal);
+  const [email, setEmail] = useState(portal === 'client' ? 'alemu@epss.com' : '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  React.useEffect(() => {
+    if (user?.role === 'client') navigate('/client', { replace: true });
+    else if (user?.role === 'staff') navigate('/', { replace: true });
+  }, [user, navigate]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     setTimeout(() => {
+      const result = login(email, password, portal);
       setLoading(false);
+      if (!result.ok) {
+        setError(result.message);
+        toast.error(result.message);
+        return;
+      }
       if (typeof window.FS === 'function') {
         const displayName = email
           .split('@')[0]
@@ -71,14 +92,11 @@ export function Login() {
           .replace(/\b\w/g, (c) => c.toUpperCase());
         window.FS('setIdentity', {
           uid: email,
-          properties: {
-            displayName,
-            email,
-          },
+          properties: { displayName, email },
         });
       }
-      navigate('/');
-    }, 800);
+      navigate(portal === 'client' ? '/client' : '/');
+    }, 600);
   };
 
   return (
@@ -167,8 +185,39 @@ export function Login() {
             <CardContent className="p-8">
             <div className="mb-8">
               <h2 className="text-primary text-[22px] font-semibold tracking-tight">Welcome back</h2>
-              <p className="text-muted-foreground mt-1.5 text-[13px]">Sign in to your Service Desk workspace</p>
+              <p className="text-muted-foreground mt-1.5 text-[13px]">
+                {portal === 'client' ? 'Sign in to your client portal' : 'Sign in to your Service Desk workspace'}
+              </p>
             </div>
+
+            <div className="mb-5 flex gap-1 rounded-lg border bg-muted p-1">
+              <button
+                type="button"
+                onClick={() => { setPortal('staff'); setEmail(''); setError(''); }}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[12px] font-medium transition-colors ${
+                  portal === 'staff' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Ticket className="w-3.5 h-3.5" />
+                Staff Workspace
+              </button>
+              <button
+                type="button"
+                onClick={() => { setPortal('client'); setEmail('alemu@epss.com'); setError(''); }}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[12px] font-medium transition-colors ${
+                  portal === 'client' ? 'bg-background text-violet-700 shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <MonitorSmartphone className="w-3.5 h-3.5" />
+                Client Portal
+              </button>
+            </div>
+
+            {error && (
+              <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">
+                {error}
+              </div>
+            )}
 
             <form onSubmit={handleLogin} className="space-y-4">
               {/* Email */}
@@ -268,10 +317,11 @@ export function Login() {
           {/* Footer */}
           <div className="mt-6 text-center">
             <p className="text-[12px] text-[#9ca3af]">
-              Don't have an account?{' '}
-              <Button variant="link" className="h-auto p-0 font-medium">
-                Contact your administrator
-              </Button>
+              {portal === 'client' ? (
+                <>Demo: <span className="font-medium text-foreground">alemu@epss.com</span> · any password</>
+              ) : (
+                <>Demo: <span className="font-medium text-foreground">abreham.t@ienetworks.co</span> · any password</>
+              )}
             </p>
           </div>
 

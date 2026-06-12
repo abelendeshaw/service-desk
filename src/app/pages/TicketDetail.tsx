@@ -20,6 +20,7 @@ import {
   Send,
   Paperclip,
   ChevronRight,
+  User,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { Badge } from "../components/ui/badge";
@@ -288,6 +289,11 @@ export function TicketDetail() {
                       <div className="flex items-center gap-1">
                         <Building2 className="w-3.5 h-3.5" />
                         {ticket.project}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <User className="w-3.5 h-3.5" />
+                        {ticket.createdBy.name}
+                        {ticket.createdBy.email ? ` · ${ticket.createdBy.email}` : ""}
                       </div>
                       <div className="flex items-center gap-1 text-red-600">
                         <AlertTriangle className="w-3.5 h-3.5" />
