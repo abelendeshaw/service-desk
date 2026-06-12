@@ -18,7 +18,6 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "../components/ui/table";
-import { getTicketSupportType, supportTypeBadgeClass } from "../lib/ticketSupportType";
 import { useAuth } from "../store/authStore";
 import { useServiceDesk } from "../store/serviceDeskStore";
 
@@ -64,7 +63,7 @@ function daysSince(iso: string) {
 export function ClientDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { tickets, clientArticles, slas } = useServiceDesk();
+  const { tickets, clientArticles } = useServiceDesk();
 
   const myTickets = useMemo(
     () => tickets.filter((t) => t.project === user?.company),
@@ -84,8 +83,6 @@ export function ClientDashboard() {
   const recentTickets = [...myTickets]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 6);
-
-  const supportType = user?.company ? getTicketSupportType(slas, user.company) : "Normal Support";
 
   const kpis = [
     { key: "open", label: "Open Tickets", value: open.length, change: "+2", up: true, icon: Ticket, color: "#2563eb" },
@@ -111,7 +108,6 @@ export function ClientDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className={`text-[11px] ${supportTypeBadgeClass[supportType]}`}>{supportType}</Badge>
           <Button onClick={() => navigate("/client/tickets/new")} size="sm" className="gap-1.5 bg-violet-600 text-[13px] hover:bg-violet-700">
             <Plus className="h-3.5 w-3.5" />
             Create Ticket

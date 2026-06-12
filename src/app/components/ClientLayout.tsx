@@ -55,7 +55,6 @@ const navItems = [
   { name: "Dashboard", href: "/client", icon: LayoutDashboard, end: true },
   { name: "My Tickets", href: "/client/tickets", icon: Ticket, end: false },
   { name: "Knowledge Base", href: "/client/knowledge", icon: BookOpen, end: false },
-  { name: "Account", href: "/client/account", icon: UserCircle, end: false },
 ];
 
 export function ClientLayout() {
@@ -162,6 +161,29 @@ export function ClientLayout() {
             </NavLink>
           ))}
         </nav>
+
+        <div className="border-sidebar-border flex-shrink-0 border-t p-2">
+          <NavLink
+            to="/client/account"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-2 py-2 rounded-md transition-all group relative ${
+                isActive
+                  ? "bg-white text-violet-700 dark:bg-sidebar-muted dark:text-sidebar-foreground"
+                  : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+              } ${sidebarCollapsed ? "justify-center" : ""}`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                {isActive && !sidebarCollapsed && (
+                  <div className="bg-violet-400 absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full" />
+                )}
+                <UserCircle className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-violet-700 dark:text-sidebar-foreground" : ""}`} />
+                {!sidebarCollapsed && <span className="text-[13px] font-medium">Account</span>}
+              </>
+            )}
+          </NavLink>
+        </div>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
