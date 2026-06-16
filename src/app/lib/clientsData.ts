@@ -1,5 +1,12 @@
 export type ClientStatus = "Active" | "Inactive";
 
+export type ClientContactInput = {
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+};
+
 export type ServiceDeskClient = {
   id: string;
   pmCompanyId: string;
@@ -298,26 +305,35 @@ export function getPMCompany(pmCompanyId: string): PMCompany | undefined {
   return pmCompanies.find((c) => c.id === pmCompanyId);
 }
 
-export function buildClientFromPM(pm: PMCompany, status: ClientStatus = "Active"): ServiceDeskClient {
-  const contact = pm.primaryContact;
-  const contactInitials =
-    contact.name
+function contactInitialsFromName(name: string, fallback: string): string {
+  const initials =
+    name
       .trim()
       .split(/\s+/)
       .map((p) => p[0])
       .join("")
       .slice(0, 2)
-      .toUpperCase() || pm.initials;
+      .toUpperCase() || fallback;
+  return initials;
+}
 
-  return {
-    id: contact.email.toLowerCase(),
+export function hasClientContact(client: ServiceDeskClient): boolean {
+  return Boolean(client.name.trim() && client.email.trim());
+}
+
+export function companyClientId(pmCompanyId: string): string {
+  return `company-${pmCompanyId}`;
+}
+
+export function buildClientFromPM(
+  pm: PMCompany,
+  options?: { status?: ClientStatus; contact?: ClientContactInput },
+): ServiceDeskClient {
+  const status = options?.status ?? "Active";
+  const contact = options?.contact;
+  const base = {
     pmCompanyId: pm.id,
-    name: contact.name,
-    email: contact.email.toLowerCase(),
-    phone: contact.phone,
-    role: contact.role,
     status,
-    initials: contactInitials,
     color: pm.color,
     company: pm.name,
     companyDesc: pm.description,
@@ -326,6 +342,28 @@ export function buildClientFromPM(pm: PMCompany, status: ClientStatus = "Active"
     companyPhone: pm.phone,
     companyWebsite: pm.website,
     address: pm.address,
+  };
+
+  if (contact?.name.trim() && contact.email.trim()) {
+    return {
+      ...base,
+      id: contact.email.trim().toLowerCase(),
+      name: contact.name.trim(),
+      email: contact.email.trim().toLowerCase(),
+      phone: contact.phone.trim(),
+      role: contact.role.trim() || "Primary Contact",
+      initials: contactInitialsFromName(contact.name, pm.initials),
+    };
+  }
+
+  return {
+    ...base,
+    id: companyClientId(pm.id),
+    name: "",
+    email: "",
+    phone: "",
+    role: "",
+    initials: pm.initials,
   };
 }
 
@@ -361,7 +399,14 @@ export const seedServiceDeskClients: ServiceDeskClient[] = pmCompanies
     ].includes(pm.id),
   )
   .map((pm) => {
-    const client = buildClientFromPM(pm);
+    const client = buildClientFromPM(pm, {
+      contact: {
+        name: pm.primaryContact.name,
+        email: pm.primaryContact.email,
+        phone: pm.primaryContact.phone,
+        role: pm.primaryContact.role,
+      },
+    });
     if (pm.id === "pm-mint") return { ...client, status: "Inactive" as const };
     return client;
   });

@@ -1,6 +1,6 @@
 import React from "react";
 import { toast } from "sonner";
-import { buildClientFromPM, getPMCompany, seedServiceDeskClients, type ServiceDeskClient } from "../lib/clientsData";
+import { buildClientFromPM, getPMCompany, seedServiceDeskClients, type ClientContactInput, type ServiceDeskClient } from "../lib/clientsData";
 import { seedClientArticles, seedEmailThreads, seedEngineers, seedNotifications, seedSLAs, seedTickets } from "./seed";
 import type {
   Attachment,
@@ -108,7 +108,8 @@ type Actions = {
     status: ClientArticleStatus;
   }): void;
   incrementClientArticleViews(id: string): void;
-  addClientFromPM(pmCompanyId: string): string | null;
+  addClientFromPM(pmCompanyId: string, contact?: ClientContactInput): string | null;
+  updateClientContact(clientId: string, contact: ClientContactInput): string | null;
 };
 
 type Store = State & Actions;
@@ -848,18 +849,27 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
         }));
       },
 
-      addClientFromPM: (pmCompanyId) => {
+      addClientFromPM: (pmCompanyId, contact) => {
         const pm = getPMCompany(pmCompanyId);
         if (!pm) {
           toast.error("Company not found in PM");
           return null;
         }
         let createdId: string | null = null;
+        let errorMessage: string | null = null;
         setAndPersist((prev) => {
           if (prev.clients.some((c) => c.pmCompanyId === pmCompanyId || c.company === pm.name)) {
+            errorMessage = `${pm.name} is already in Service Desk`;
             return prev;
           }
-          const client = buildClientFromPM(pm);
+          if (contact?.email.trim()) {
+            const email = contact.email.trim().toLowerCase();
+            if (prev.clients.some((c) => c.email === email)) {
+              errorMessage = "A client with this contact email already exists";
+              return prev;
+            }
+          }
+          const client = buildClientFromPM(pm, { contact });
           createdId = client.id;
           return { ...prev, clients: [client, ...prev.clients] };
         });
@@ -867,7 +877,57 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
           toast.success(`${pm.name} added from PM`);
           return createdId;
         }
-        toast.error(`${pm.name} is already in Service Desk`);
+        toast.error(errorMessage ?? `${pm.name} could not be added`);
+        return null;
+      },
+
+      updateClientContact: (clientId, contact) => {
+        const name = contact.name.trim();
+        const email = contact.email.trim().toLowerCase();
+        const phone = contact.phone.trim();
+        const role = contact.role.trim() || "Primary Contact";
+        if (!name || !email) {
+          toast.error("Contact name and email are required");
+          return null;
+        }
+
+        let nextId: string | null = null;
+        setAndPersist((prev) => {
+          const index = prev.clients.findIndex((c) => c.id === clientId);
+          if (index === -1) return prev;
+          if (prev.clients.some((c) => c.id !== clientId && c.email === email)) {
+            toast.error("A client with this contact email already exists");
+            return prev;
+          }
+
+          const existing = prev.clients[index];
+          const initials =
+            name
+              .split(/\s+/)
+              .map((p) => p[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase() || existing.initials;
+
+          const updated: ServiceDeskClient = {
+            ...existing,
+            id: email,
+            name,
+            email,
+            phone,
+            role,
+            initials,
+          };
+          nextId = updated.id;
+          const clients = [...prev.clients];
+          clients[index] = updated;
+          return { ...prev, clients };
+        });
+
+        if (nextId) {
+          toast.success("Contact information saved");
+          return nextId;
+        }
         return null;
       },
     }),

@@ -88,13 +88,16 @@ const navGroups = [
 ];
 
 function isNavItemActive(href: string, pathname: string, exact?: boolean) {
+  const isCreateArticle = pathname.startsWith("/knowledge/edit/");
+
   if (href === "/knowledge") {
-    return pathname.startsWith("/knowledge");
+    return pathname.startsWith("/knowledge") && !isCreateArticle;
   }
   if (href === "/tickets") {
     return (
-      (pathname.startsWith("/tickets") || pathname.startsWith("/email-support")) &&
-      !pathname.startsWith("/knowledge")
+      pathname.startsWith("/tickets") ||
+      pathname.startsWith("/email-support") ||
+      isCreateArticle
     );
   }
   if (exact) {

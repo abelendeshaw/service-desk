@@ -26,7 +26,8 @@ import {
   getAvailablePMCompanies,
   getClientTicketStats,
   getPMCompany,
-  type ServiceDeskClient,
+  hasClientContact,
+  type ClientContactInput,
 } from '../lib/clientsData';
 import { useServiceDesk } from '../store/serviceDeskStore';
 import type { SLA } from '../store/types';
@@ -55,6 +56,13 @@ export function Contacts() {
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [selectedPmId, setSelectedPmId] = useState('');
   const [savedCompany, setSavedCompany] = useState(false);
+  const [contactForm, setContactForm] = useState<ClientContactInput>({
+    name: '',
+    email: '',
+    phone: '',
+    role: '',
+  });
+  const [contactFormError, setContactFormError] = useState('');
 
   const availablePMCompanies = useMemo(() => getAvailablePMCompanies(clients), [clients]);
   const selectedPM = useMemo(
@@ -76,15 +84,44 @@ export function Contacts() {
     }
   }, [showCompanyModal, availablePMCompanies, selectedPmId]);
 
+  const resetCompanyModal = () => {
+    setSelectedPmId('');
+    setSavedCompany(false);
+    setContactForm({ name: '', email: '', phone: '', role: '' });
+    setContactFormError('');
+  };
+
   const handleAddCompany = () => {
     if (!selectedPmId) return;
-    const clientId = addClientFromPM(selectedPmId);
+
+    const hasName = Boolean(contactForm.name.trim());
+    const hasEmail = Boolean(contactForm.email.trim());
+    const hasPhone = Boolean(contactForm.phone.trim());
+    const hasRole = Boolean(contactForm.role.trim());
+    const hasAnyContactField = hasName || hasEmail || hasPhone || hasRole;
+
+    if (hasAnyContactField && (!hasName || !hasEmail)) {
+      setContactFormError('Enter both contact name and email, or leave all contact fields empty.');
+      return;
+    }
+
+    const clientId = addClientFromPM(
+      selectedPmId,
+      hasName && hasEmail
+        ? {
+            name: contactForm.name.trim(),
+            email: contactForm.email.trim(),
+            phone: contactForm.phone.trim(),
+            role: contactForm.role.trim() || 'Contact',
+          }
+        : undefined,
+    );
     if (!clientId) return;
     setSavedCompany(true);
     setTimeout(() => {
       setSavedCompany(false);
       setShowCompanyModal(false);
-      setSelectedPmId('');
+      resetCompanyModal();
       navigate(`/clients/${encodeURIComponent(clientId)}`);
     }, 700);
   };
@@ -105,7 +142,13 @@ export function Contacts() {
 
   const filtered = clientsWithStats
     .filter((c) => {
-      if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.email.includes(search.toLowerCase()) && !c.company.toLowerCase().includes(search.toLowerCase())) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        const matchesCompany = c.company.toLowerCase().includes(q);
+        const matchesName = c.name.toLowerCase().includes(q);
+        const matchesEmail = c.email.toLowerCase().includes(q);
+        if (!matchesCompany && !matchesName && !matchesEmail) return false;
+      }
       if (statusFilter !== 'all' && c.status !== statusFilter) return false;
       return true;
     })
@@ -173,7 +216,7 @@ export function Contacts() {
               <TableHead className="w-10 pl-6 py-3">
                 <Checkbox
                   checked={filtered.length > 0 && selected.length === filtered.length}
-                  onCheckedChange={(checked) => setSelected(checked ? filtered.map((c) => c.email) : [])}
+                  onCheckedChange={(checked) => setSelected(checked ? filtered.map((c) => c.id) : [])}
                 />
               </TableHead>
               <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -202,53 +245,64 @@ export function Contacts() {
             </TableRow>
           </TableHeader>
           <TableBody className="bg-background">
-            {filtered.map((contact) => {
-              const isSelected = selected.includes(contact.email);
+            {filtered.map((client) => {
+              const isSelected = selected.includes(client.id);
+              const hasContact = hasClientContact(client);
               return (
                 <TableRow
-                  key={contact.email}
+                  key={client.id}
                   data-state={isSelected ? 'selected' : undefined}
                   className="group cursor-pointer"
-                  onClick={() => navigate(`/clients/${encodeURIComponent(contact.email)}`)}
+                  onClick={() => navigate(`/clients/${encodeURIComponent(client.id)}`)}
                 >
                   <TableCell className="w-10 pl-6 py-3.5" onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={isSelected}
-                      onCheckedChange={() => setSelected((p) => p.includes(contact.email) ? p.filter((x) => x !== contact.email) : [...p, contact.email])}
+                      onCheckedChange={() => setSelected((p) => p.includes(client.id) ? p.filter((x) => x !== client.id) : [...p, client.id])}
                     />
                   </TableCell>
                   <TableCell className="px-4 py-3.5">
                     <div className="flex items-center gap-2.5">
                       <Avatar className="size-8 rounded-md">
-                        <AvatarFallback className="rounded-md text-[11px] font-bold text-white" style={{ backgroundColor: contact.color }}>
-                          {contact.initials}
+                        <AvatarFallback className="rounded-md text-[11px] font-bold text-white" style={{ backgroundColor: client.color }}>
+                          {client.initials}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="text-[13px] font-semibold">{contact.company}</div>
-                        <div className="mt-0.5 text-[11px] text-muted-foreground truncate max-w-[180px]">{contact.companyDesc}</div>
+                        <div className="text-[13px] font-semibold">{client.company}</div>
+                        <div className="mt-0.5 text-[11px] text-muted-foreground truncate max-w-[180px]">{client.companyDesc}</div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-3.5">
-                    <div className="text-[13px] font-medium">{contact.name}</div>
-                    <div className="mt-0.5 text-[11px] text-muted-foreground">{contact.role}</div>
+                    {hasContact ? (
+                      <>
+                        <div className="text-[13px] font-medium">{client.name}</div>
+                        <div className="mt-0.5 text-[11px] text-muted-foreground">{client.role}</div>
+                      </>
+                    ) : (
+                      <span className="text-[12px] text-muted-foreground italic">No contact</span>
+                    )}
                   </TableCell>
                   <TableCell className="px-4 py-3.5">
-                    <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
-                      <Mail className="w-3 h-3" />
-                      {contact.email}
-                    </div>
+                    {hasContact ? (
+                      <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+                        <Mail className="w-3 h-3" />
+                        {client.email}
+                      </div>
+                    ) : (
+                      <span className="text-[12px] text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell className="px-4 py-3.5">
-                    <div className={`flex items-center gap-1.5 text-[12px] font-medium ${contact.status === 'Active' ? 'text-emerald-600' : 'text-muted-foreground'}`}>
-                      <div className={`h-1.5 w-1.5 rounded-full ${contact.status === 'Active' ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
-                      {contact.status}
+                    <div className={`flex items-center gap-1.5 text-[12px] font-medium ${client.status === 'Active' ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                      <div className={`h-1.5 w-1.5 rounded-full ${client.status === 'Active' ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
+                      {client.status}
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-3.5">
                     {(() => {
-                      const projects = getCompanyProjects(slas, contact.company);
+                      const projects = getCompanyProjects(slas, client.company);
                       if (projects.length === 0) {
                         return <span className="text-[12px] text-muted-foreground">—</span>;
                       }
@@ -268,17 +322,17 @@ export function Contacts() {
                   </TableCell>
                   <TableCell className="px-4 py-3.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-[13px] font-semibold">{contact.tickets}</span>
+                      <span className="text-[13px] font-semibold">{client.tickets}</span>
                       <span className="text-[11px] text-muted-foreground">total</span>
-                      <Badge variant="outline" className="text-[11px]">{contact.activeTickets} open</Badge>
+                      <Badge variant="outline" className="text-[11px]">{client.activeTickets} open</Badge>
                     </div>
                   </TableCell>
                   <TableCell className="pr-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                     <RowActionsMenu
-                      entityName={contact.name}
-                      onView={() => navigate(`/clients/${encodeURIComponent(contact.email)}`)}
-                      onEdit={() => toast.info(`Edit ${contact.name} coming soon`)}
-                      onDelete={() => toast.success(`${contact.name} removed`)}
+                      entityName={hasContact ? client.name : client.company}
+                      onView={() => navigate(`/clients/${encodeURIComponent(client.id)}`)}
+                      onEdit={() => toast.info(`Edit ${client.company} coming soon`)}
+                      onDelete={() => toast.success(`${client.company} removed`)}
                     />
                   </TableCell>
                 </TableRow>
@@ -315,10 +369,7 @@ export function Contacts() {
       {/* New Company Modal */}
       <Dialog open={showCompanyModal} onOpenChange={(open) => {
         setShowCompanyModal(open);
-        if (!open) {
-          setSelectedPmId('');
-          setSavedCompany(false);
-        }
+        if (!open) resetCompanyModal();
       }}>
         <DialogContent className="max-w-lg p-0 overflow-hidden">
           <DialogHeader className="border-b px-5 py-4">
@@ -329,7 +380,7 @@ export function Contacts() {
               New Company
             </DialogTitle>
             <DialogDescription className="text-[11px]">
-              Select a company to onboard into Service Desk. Contact details are seeded automatically.
+              Select a company to onboard into Service Desk. Contact fields are optional.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 p-5">
@@ -363,12 +414,64 @@ export function Contacts() {
                   <div><span className="text-muted-foreground">Industry:</span> {selectedPM.industry}</div>
                   <div className="col-span-2"><span className="text-muted-foreground">Website:</span> {selectedPM.website}</div>
                 </div>
-                <div className="border-t pt-3">
-                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Primary contact</div>
-                  <div className="text-[13px] font-medium">{selectedPM.primaryContact.name}</div>
-                  <div className="mt-0.5 text-[12px] text-muted-foreground">{selectedPM.primaryContact.email}</div>
-                  <div className="text-[12px] text-muted-foreground">{selectedPM.primaryContact.phone} · {selectedPM.primaryContact.role}</div>
+              </div>
+            )}
+            {selectedPM && (
+              <div className="rounded-lg border bg-background p-4 space-y-3">
+                <div>
+                  <Label className="text-[12px]">Contact name</Label>
+                  <Input
+                    className="mt-1.5 h-9 text-[13px]"
+                    value={contactForm.name}
+                    onChange={(e) => {
+                      setContactFormError('');
+                      setContactForm((p) => ({ ...p, name: e.target.value }));
+                    }}
+                    placeholder="Full name"
+                  />
                 </div>
+                <div>
+                  <Label className="text-[12px]">Email</Label>
+                  <Input
+                    type="email"
+                    className="mt-1.5 h-9 text-[13px]"
+                    value={contactForm.email}
+                    onChange={(e) => {
+                      setContactFormError('');
+                      setContactForm((p) => ({ ...p, email: e.target.value }));
+                    }}
+                    placeholder="contact@company.com"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-[12px]">Phone</Label>
+                    <Input
+                      className="mt-1.5 h-9 text-[13px]"
+                      value={contactForm.phone}
+                      onChange={(e) => {
+                        setContactFormError('');
+                        setContactForm((p) => ({ ...p, phone: e.target.value }));
+                      }}
+                      placeholder="+251 ..."
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[12px]">Role</Label>
+                    <Input
+                      className="mt-1.5 h-9 text-[13px]"
+                      value={contactForm.role}
+                      onChange={(e) => {
+                        setContactFormError('');
+                        setContactForm((p) => ({ ...p, role: e.target.value }));
+                      }}
+                      placeholder="Role"
+                    />
+                  </div>
+                </div>
+                {contactFormError && (
+                  <p className="text-[12px] text-destructive">{contactFormError}</p>
+                )}
               </div>
             )}
           </div>

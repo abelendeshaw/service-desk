@@ -9,11 +9,17 @@ import {
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '../components/ui/dialog';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import { Separator } from '../components/ui/separator';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../components/ui/table';
 import { useServiceDesk } from '../store/serviceDeskStore';
+import { hasClientContact, type ClientContactInput } from '../lib/clientsData';
 import {
   calcSLAStatus, calcRemainingTime, calcDurationLabel,
   calcSupportType, slaStatusConfig,
@@ -56,13 +62,22 @@ type Tab = 'overview' | 'projects' | 'tickets';
 export function ContactDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { slas, tickets, clients } = useServiceDesk();
+  const { slas, tickets, clients, updateClientContact } = useServiceDesk();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const [showAddContact, setShowAddContact] = useState(false);
+  const [contactForm, setContactForm] = useState<ClientContactInput>({
+    name: '',
+    email: '',
+    phone: '',
+    role: 'Primary Contact',
+  });
+  const [contactFormError, setContactFormError] = useState('');
 
   const contact = useMemo(
-    () => clients.find((c) => c.id === decodeURIComponent(id ?? '').toLowerCase()),
+    () => clients.find((c) => c.id === decodeURIComponent(id ?? '')),
     [clients, id],
   );
+  const hasContact = contact ? hasClientContact(contact) : false;
 
   // Match SLAs: exact match or "company startsWith" (handles "IE Innovation Ethiopia" → "IE")
   const contactSLAs = useMemo(() => {
@@ -111,6 +126,35 @@ export function ContactDetail() {
       </div>
     );
   }
+
+  const openAddContact = () => {
+    setContactForm({
+      name: contact.name,
+      email: contact.email,
+      phone: contact.phone,
+      role: contact.role || 'Primary Contact',
+    });
+    setContactFormError('');
+    setShowAddContact(true);
+  };
+
+  const handleSaveContact = () => {
+    if (!contactForm.name.trim() || !contactForm.email.trim()) {
+      setContactFormError('Contact name and email are required.');
+      return;
+    }
+    const nextId = updateClientContact(contact.id, {
+      name: contactForm.name.trim(),
+      email: contactForm.email.trim(),
+      phone: contactForm.phone.trim(),
+      role: contactForm.role.trim() || 'Primary Contact',
+    });
+    if (!nextId) return;
+    setShowAddContact(false);
+    if (nextId !== contact.id) {
+      navigate(`/clients/${encodeURIComponent(nextId)}`, { replace: true });
+    }
+  };
 
   const tabs = [
     { id: 'overview' as Tab,    label: 'Overview',            icon: User,          count: 0 },
@@ -203,6 +247,22 @@ export function ContactDetail() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="px-5 py-4 space-y-3">
+                    {!hasContact ? (
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <div className="mb-3 flex size-10 items-center justify-center rounded-lg bg-muted">
+                          <User className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                        <p className="text-[13px] font-medium">No contact information</p>
+                        <p className="mt-1 max-w-[240px] text-[12px] text-muted-foreground">
+                          Add a primary contact for this company when you are ready.
+                        </p>
+                        <Button size="sm" className="mt-4 gap-1.5 text-[13px]" onClick={openAddContact}>
+                          <Plus className="w-3.5 h-3.5" />
+                          Add Contact
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
                     <div className="flex items-center gap-3">
                       <div
                         className="flex size-7 items-center justify-center rounded-md flex-shrink-0"
@@ -229,9 +289,11 @@ export function ContactDetail() {
                       <Phone className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       <div>
                         <div className="text-[11px] text-muted-foreground">Phone</div>
-                        <div className="text-[13px]">{contact.phone}</div>
+                        <div className="text-[13px]">{contact.phone || '—'}</div>
                       </div>
                     </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -583,6 +645,69 @@ export function ContactDetail() {
         )}
 
       </div>
+
+      <Dialog open={showAddContact} onOpenChange={setShowAddContact}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[15px]">Add Contact Information</DialogTitle>
+            <DialogDescription className="text-[12px]">
+              Add a primary contact for {contact.company}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <div>
+              <Label className="text-[12px]">Contact name <span className="text-red-500">*</span></Label>
+              <Input
+                className="mt-1.5 h-9 text-[13px]"
+                value={contactForm.name}
+                onChange={(e) => setContactForm((p) => ({ ...p, name: e.target.value }))}
+                placeholder="Full name"
+              />
+            </div>
+            <div>
+              <Label className="text-[12px]">Email <span className="text-red-500">*</span></Label>
+              <Input
+                type="email"
+                className="mt-1.5 h-9 text-[13px]"
+                value={contactForm.email}
+                onChange={(e) => setContactForm((p) => ({ ...p, email: e.target.value }))}
+                placeholder="contact@company.com"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-[12px]">Phone</Label>
+                <Input
+                  className="mt-1.5 h-9 text-[13px]"
+                  value={contactForm.phone}
+                  onChange={(e) => setContactForm((p) => ({ ...p, phone: e.target.value }))}
+                  placeholder="+251 ..."
+                />
+              </div>
+              <div>
+                <Label className="text-[12px]">Role</Label>
+                <Input
+                  className="mt-1.5 h-9 text-[13px]"
+                  value={contactForm.role}
+                  onChange={(e) => setContactForm((p) => ({ ...p, role: e.target.value }))}
+                  placeholder="Primary Contact"
+                />
+              </div>
+            </div>
+            {contactFormError && (
+              <p className="text-[12px] text-destructive">{contactFormError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setShowAddContact(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={handleSaveContact}>
+              Save Contact
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
