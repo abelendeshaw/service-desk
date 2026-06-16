@@ -31,7 +31,6 @@ import { ClientTickets } from "./pages/client/ClientTickets";
 import { ClientCreateTicket } from "./pages/client/ClientCreateTicket";
 import { ClientTicketDetail } from "./pages/client/ClientTicketDetail";
 import { ClientKnowledgeBase } from "./pages/client/ClientKnowledgeBase";
-import { ClientCreateArticle } from "./pages/client/ClientCreateArticle";
 import { ClientArticleDetail } from "./pages/client/ClientArticleDetail";
 import { ClientAccount } from "./pages/client/ClientAccount";
 
@@ -54,7 +53,6 @@ export const router = createBrowserRouter([
       { path: "tickets/new", Component: ClientCreateTicket },
       { path: "tickets/:id", Component: ClientTicketDetail },
       { path: "knowledge", Component: ClientKnowledgeBase },
-      { path: "knowledge/new", Component: ClientCreateArticle },
       { path: "knowledge/:id", Component: ClientArticleDetail },
       { path: "account", Component: ClientAccount },
     ],
@@ -68,7 +66,10 @@ export const router = createBrowserRouter([
       { path: "tickets/:id", Component: TicketDetail },
       { path: "tickets/:id/edit", Component: EditTicket },
       { path: "tickets/new", Component: CreateTicket },
-      { path: "contacts", Component: Contacts },
+      { path: "email-support", element: <Navigate to="/tickets?tab=email" replace /> },
+      { path: "clients", Component: Contacts },
+      { path: "clients/:id", Component: ContactDetail },
+      { path: "contacts", element: <Navigate to="/clients" replace /> },
       { path: "contacts/:id", Component: ContactDetail },
       { path: "employees", Component: UserManagement },
       { path: "employees-list", Component: Employees },

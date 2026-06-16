@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import {
   Search, Plus, Mail, AlertCircle,
-  ArrowUpDown, CheckCircle2, Users, ShieldCheck,
+  ArrowUpDown, CheckCircle2, Users, Building2, FolderKanban,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '../components/ui/alert';
@@ -22,82 +22,14 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../components/ui/table';
+import {
+  getAvailablePMCompanies,
+  getClientTicketStats,
+  getPMCompany,
+  type ServiceDeskClient,
+} from '../lib/clientsData';
 import { useServiceDesk } from '../store/serviceDeskStore';
-import { calcSLAStatus, slaStatusConfig } from './SLAManagement';
-import type { SLA, SLAStatus } from '../store/types';
-
-const contactsData = [
-  {
-    name: 'EPSS Client', email: 'epss@gmail.com', phone: '0987654321',
-    role: 'Primary Contact', status: 'Active', initials: 'EP', color: '#7c3aed',
-    company: 'EPSS', companyDesc: 'Electric Power Systems Services',
-    tier: 'Enterprise', tickets: 18, activeTickets: 12,
-    companyPhone: '+251 11 555 0001', companyWebsite: 'https://epss.example.com',
-  },
-  {
-    name: 'ESLSE Client', email: 'eslse@gmail.com', phone: '0987654321',
-    role: 'Primary Contact', status: 'Active', initials: 'ES', color: '#1d4ed8',
-    company: 'ESLSE', companyDesc: 'Ethiopian Shipping and Logistics Services',
-    tier: 'Enterprise', tickets: 6, activeTickets: 3,
-    companyPhone: '+251 11 555 0005', companyWebsite: 'https://eslse.example.com',
-  },
-  {
-    name: 'IE Client', email: 'ie@gmail.com', phone: '0987654321',
-    role: 'Technical Contact', status: 'Active', initials: 'IE', color: '#0891b2',
-    company: 'IE', companyDesc: 'Innovation Ethiopia',
-    tier: 'Enterprise', tickets: 38, activeTickets: 25,
-    companyPhone: '+251 11 555 0002', companyWebsite: 'https://ie.example.com',
-  },
-  {
-    name: 'EOTC Client', email: 'eotc@gmail.com', phone: '0987654321',
-    role: 'Primary Contact', status: 'Active', initials: 'EO', color: '#7c3aed',
-    company: 'EOTC', companyDesc: 'Ethiopian Orthodox Tewahedo Church',
-    tier: 'Standard', tickets: 2, activeTickets: 1,
-    companyPhone: '+251 11 555 0006', companyWebsite: 'https://eotc.example.com',
-  },
-  {
-    name: 'ERA/MOTL Client', email: 'eramotl@gmail.com', phone: '0987654321',
-    role: 'Primary Contact', status: 'Active', initials: 'ER', color: '#059669',
-    company: 'ERA/MOTL', companyDesc: 'Government agency focused on infrastructure',
-    tier: 'Enterprise', tickets: 16, activeTickets: 9,
-    companyPhone: '+251 11 555 0007', companyWebsite: 'https://era.example.com',
-  },
-  {
-    name: 'MinT Client', email: 'mint@gmail.com', phone: '0987654321',
-    role: 'Technical Contact', status: 'Inactive', initials: 'MI', color: '#6b7280',
-    company: 'MinT', companyDesc: 'Ministry of Innovation and Technology',
-    tier: 'Enterprise', tickets: 17, activeTickets: 11,
-    companyPhone: '+251 11 555 0008', companyWebsite: 'https://mint.example.com',
-  },
-  {
-    name: 'MoTI Client', email: 'moti@gmail.com', phone: '0987654321',
-    role: 'Primary Contact', status: 'Active', initials: 'MO', color: '#6366f1',
-    company: 'MoTI', companyDesc: 'Ministry of Trade and Industry',
-    tier: 'Premium', tickets: 10, activeTickets: 7,
-    companyPhone: '+251 11 555 0009', companyWebsite: 'https://moti.example.com',
-  },
-  {
-    name: 'CSA Client', email: 'csa@gmail.com', phone: '0987654321',
-    role: 'Technical Contact', status: 'Active', initials: 'CS', color: '#0891b2',
-    company: 'CSA', companyDesc: 'Central Statistics Agency',
-    tier: 'Enterprise', tickets: 6, activeTickets: 2,
-    companyPhone: '+251 11 555 0003', companyWebsite: 'https://csa.example.com',
-  },
-  {
-    name: 'Abay Bank Client', email: 'abaybank@gmail.com', phone: '0987654321',
-    role: 'Primary Contact', status: 'Active', initials: 'AB', color: '#dc2626',
-    company: 'Abay Bank', companyDesc: 'Private commercial bank',
-    tier: 'Premium', tickets: 9, activeTickets: 4,
-    companyPhone: '+251 11 555 0004', companyWebsite: 'https://abay.example.com',
-  },
-  {
-    name: 'MoWS Client', email: 'mows@gmail.com', phone: '0987654321',
-    role: 'Technical Contact', status: 'Active', initials: 'MW', color: '#d97706',
-    company: 'MoWS', companyDesc: 'Ministry of Water and Sanitation',
-    tier: 'Standard', tickets: 13, activeTickets: 8,
-    companyPhone: '+251 11 555 0010', companyWebsite: 'https://mows.example.com',
-  },
-];
+import type { SLA } from '../store/types';
 
 function matchSLAs(slas: SLA[], company: string): SLA[] {
   const c = company.toLowerCase();
@@ -107,51 +39,71 @@ function matchSLAs(slas: SLA[], company: string): SLA[] {
   });
 }
 
-function getContactSLAStatus(slas: SLA[], company: string): SLAStatus | null {
-  const matched = matchSLAs(slas, company);
-  if (matched.length === 0) return null;
-  const statuses = matched.map((s) => calcSLAStatus(s.startDate, s.endDate));
-  if (statuses.includes('Expiring Soon')) return 'Expiring Soon';
-  if (statuses.includes('Active')) return 'Active';
-  if (statuses.includes('Upcoming')) return 'Upcoming';
-  return 'Expired';
-}
-
-function getContactSLAEndDate(slas: SLA[], company: string): string | null {
-  const matched = matchSLAs(slas, company);
-  if (matched.length === 0) return null;
-  const active = matched
-    .map((s) => ({ ...s, status: calcSLAStatus(s.startDate, s.endDate) }))
-    .find((s) => s.status === 'Active' || s.status === 'Expiring Soon');
-  return active?.endDate ?? null;
+function getCompanyProjects(slas: SLA[], company: string): string[] {
+  return matchSLAs(slas, company).map((s) => s.projectName);
 }
 
 export function Contacts() {
   const navigate = useNavigate();
-  const { slas } = useServiceDesk();
+  const location = useLocation();
+  const { slas, clients, tickets, addClientFromPM } = useServiceDesk();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortField, setSortField] = useState<'name' | 'company' | 'tickets'>('company');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [selected, setSelected] = useState<string[]>([]);
-  const [showContactModal, setShowContactModal] = useState(false);
-  const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', company: '', status: 'Active' });
-  const [savedContact, setSavedContact] = useState(false);
+  const [showCompanyModal, setShowCompanyModal] = useState(false);
+  const [selectedPmId, setSelectedPmId] = useState('');
+  const [savedCompany, setSavedCompany] = useState(false);
 
-  const updateContact = (k: string, v: string) => setContactForm((p) => ({ ...p, [k]: v }));
+  const availablePMCompanies = useMemo(() => getAvailablePMCompanies(clients), [clients]);
+  const selectedPM = useMemo(
+    () => (selectedPmId ? getPMCompany(selectedPmId) : undefined),
+    [selectedPmId],
+  );
 
-  const handleSaveContact = () => {
-    setSavedContact(true);
-    setTimeout(() => { setSavedContact(false); setShowContactModal(false); setContactForm({ name: '', email: '', phone: '', company: '', status: 'Active' }); }, 1000);
+  useEffect(() => {
+    const openNewCompany = (location.state as { openNewCompany?: boolean } | null)?.openNewCompany;
+    if (openNewCompany) {
+      setShowCompanyModal(true);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.pathname, location.state, navigate]);
+
+  useEffect(() => {
+    if (showCompanyModal && availablePMCompanies.length > 0 && !selectedPmId) {
+      setSelectedPmId(availablePMCompanies[0].id);
+    }
+  }, [showCompanyModal, availablePMCompanies, selectedPmId]);
+
+  const handleAddCompany = () => {
+    if (!selectedPmId) return;
+    const clientId = addClientFromPM(selectedPmId);
+    if (!clientId) return;
+    setSavedCompany(true);
+    setTimeout(() => {
+      setSavedCompany(false);
+      setShowCompanyModal(false);
+      setSelectedPmId('');
+      navigate(`/clients/${encodeURIComponent(clientId)}`);
+    }, 700);
   };
+
+  const clientsWithStats = useMemo(
+    () =>
+      clients.map((client) => ({
+        ...client,
+        ...getClientTicketStats(tickets, client.company),
+      })),
+    [clients, tickets],
+  );
 
   const toggleSort = (field: typeof sortField) => {
     if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     else { setSortField(field); setSortDir('asc'); }
   };
 
-  const companies = [...new Set(contactsData.map((c) => c.company))];
-  const filtered = contactsData
+  const filtered = clientsWithStats
     .filter((c) => {
       if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.email.includes(search.toLowerCase()) && !c.company.toLowerCase().includes(search.toLowerCase())) return false;
       if (statusFilter !== 'all' && c.status !== statusFilter) return false;
@@ -172,15 +124,15 @@ export function Contacts() {
       <div className="border-b bg-background px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[20px] font-semibold tracking-tight">Contacts</h1>
+            <h1 className="text-[20px] font-semibold tracking-tight">Clients</h1>
             <p className="mt-0.5 text-[13px] text-muted-foreground">
-              Client contacts and their organizations · {contactsData.length} contacts
+              Client companies onboarded from PM · {clients.length} clients
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" className="gap-1.5 text-[13px]" onClick={() => setShowContactModal(true)}>
+            <Button size="sm" className="gap-1.5 text-[13px]" onClick={() => setShowCompanyModal(true)}>
               <Plus className="w-3.5 h-3.5" />
-              New Contact
+              New Company
             </Button>
           </div>
         </div>
@@ -191,7 +143,7 @@ export function Contacts() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search contacts, companies or emails..."
+            placeholder="Search clients, companies or emails..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-8 bg-muted pl-9 pr-3 text-[13px]"
@@ -238,7 +190,7 @@ export function Contacts() {
               <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
               <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <div className="flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3" /> SLA
+                  <FolderKanban className="w-3 h-3" /> Projects
                 </div>
               </TableHead>
               <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -257,7 +209,7 @@ export function Contacts() {
                   key={contact.email}
                   data-state={isSelected ? 'selected' : undefined}
                   className="group cursor-pointer"
-                  onClick={() => navigate(`/contacts/${encodeURIComponent(contact.email)}`)}
+                  onClick={() => navigate(`/clients/${encodeURIComponent(contact.email)}`)}
                 >
                   <TableCell className="w-10 pl-6 py-3.5" onClick={(e) => e.stopPropagation()}>
                     <Checkbox
@@ -296,18 +248,19 @@ export function Contacts() {
                   </TableCell>
                   <TableCell className="px-4 py-3.5">
                     {(() => {
-                      const slaStatus = getContactSLAStatus(slas, contact.company);
-                      const endDate = getContactSLAEndDate(slas, contact.company);
-                      if (!slaStatus) return <span className="text-[12px] text-muted-foreground">—</span>;
-                      const cfg = slaStatusConfig[slaStatus];
+                      const projects = getCompanyProjects(slas, contact.company);
+                      if (projects.length === 0) {
+                        return <span className="text-[12px] text-muted-foreground">—</span>;
+                      }
                       return (
-                        <div>
-                          <Badge variant="outline" className={`gap-1 text-[11px] ${cfg.badgeClass}`}>
-                            <span className={`size-1.5 rounded-full ${cfg.dotClass}`} />
-                            {slaStatus}
-                          </Badge>
-                          {endDate && (
-                            <div className="mt-0.5 text-[11px] text-muted-foreground">until {endDate}</div>
+                        <div className="space-y-1">
+                          {projects.slice(0, 2).map((project) => (
+                            <div key={project} className="max-w-[200px] truncate text-[12px] font-medium">
+                              {project}
+                            </div>
+                          ))}
+                          {projects.length > 2 && (
+                            <div className="text-[11px] text-muted-foreground">+{projects.length - 2} more</div>
                           )}
                         </div>
                       );
@@ -323,7 +276,7 @@ export function Contacts() {
                   <TableCell className="pr-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                     <RowActionsMenu
                       entityName={contact.name}
-                      onView={() => navigate(`/contacts/${encodeURIComponent(contact.email)}`)}
+                      onView={() => navigate(`/clients/${encodeURIComponent(contact.email)}`)}
                       onEdit={() => toast.info(`Edit ${contact.name} coming soon`)}
                       onDelete={() => toast.success(`${contact.name} removed`)}
                     />
@@ -337,7 +290,7 @@ export function Contacts() {
                   <div className="flex flex-col items-center gap-3">
                     <AlertCircle className="w-8 h-8 text-muted-foreground" />
                     <div>
-                      <div className="text-[14px] font-medium">No contacts found</div>
+                      <div className="text-[14px] font-medium">No clients found</div>
                       <div className="mt-1 text-[13px] text-muted-foreground">Try adjusting your search or filters</div>
                     </div>
                   </div>
@@ -350,7 +303,7 @@ export function Contacts() {
 
       {/* Footer */}
       <div className="flex shrink-0 items-center justify-between border-t bg-background px-6 py-3">
-        <span className="text-[12px] text-muted-foreground">Showing {filtered.length} of {contactsData.length} contacts</span>
+        <span className="text-[12px] text-muted-foreground">Showing {filtered.length} of {clients.length} clients</span>
         {selected.length > 0 && (
           <div className="flex items-center gap-2">
             <span className="text-[12px] text-muted-foreground">{selected.length} selected</span>
@@ -359,66 +312,83 @@ export function Contacts() {
         )}
       </div>
 
-      {/* New Contact Modal */}
-      <Dialog open={showContactModal} onOpenChange={setShowContactModal}>
-        <DialogContent className="max-w-md p-0 overflow-hidden">
+      {/* New Company Modal */}
+      <Dialog open={showCompanyModal} onOpenChange={(open) => {
+        setShowCompanyModal(open);
+        if (!open) {
+          setSelectedPmId('');
+          setSavedCompany(false);
+        }
+      }}>
+        <DialogContent className="max-w-lg p-0 overflow-hidden">
           <DialogHeader className="border-b px-5 py-4">
             <DialogTitle className="flex items-center gap-2.5 text-[14px]">
               <span className="flex size-7 items-center justify-center rounded-md bg-primary/10">
-                <Users className="w-4 h-4 text-primary" />
+                <Building2 className="w-4 h-4 text-primary" />
               </span>
-              New Contact
+              New Company
             </DialogTitle>
-            <DialogDescription className="text-[11px]">Add a new client contact to an existing company</DialogDescription>
+            <DialogDescription className="text-[11px]">
+              Select a company to onboard into Service Desk. Contact details are seeded automatically.
+            </DialogDescription>
           </DialogHeader>
-          <div className="p-5 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="mb-1.5 block text-[12px]">Full Name <span className="text-red-500">*</span></Label>
-                <Input value={contactForm.name} onChange={(e) => updateContact('name', e.target.value)} placeholder="John Doe" className="h-9 text-[13px]" />
+          <div className="space-y-4 p-5">
+            <div>
+              <Label className="mb-1.5 block text-[12px]">Companies <span className="text-red-500">*</span></Label>
+              {availablePMCompanies.length === 0 ? (
+                <div className="rounded-md border border-dashed px-4 py-6 text-center text-[13px] text-muted-foreground">
+                  All companies are already onboarded.
+                </div>
+              ) : (
+                <Select value={selectedPmId || undefined} onValueChange={setSelectedPmId}>
+                  <SelectTrigger className="h-9 text-[13px]"><SelectValue placeholder="Select a company" /></SelectTrigger>
+                  <SelectContent>
+                    {availablePMCompanies.map((pm) => (
+                      <SelectItem key={pm.id} value={pm.id}>
+                        {pm.name} · {pm.industry}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            {selectedPM && (
+              <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
+                <div>
+                  <div className="text-[13px] font-semibold">{selectedPM.name}</div>
+                  <div className="mt-0.5 text-[12px] text-muted-foreground">{selectedPM.description}</div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[12px]">
+                  <div><span className="text-muted-foreground">Tier:</span> {selectedPM.tier}</div>
+                  <div><span className="text-muted-foreground">Industry:</span> {selectedPM.industry}</div>
+                  <div className="col-span-2"><span className="text-muted-foreground">Website:</span> {selectedPM.website}</div>
+                </div>
+                <div className="border-t pt-3">
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Primary contact</div>
+                  <div className="text-[13px] font-medium">{selectedPM.primaryContact.name}</div>
+                  <div className="mt-0.5 text-[12px] text-muted-foreground">{selectedPM.primaryContact.email}</div>
+                  <div className="text-[12px] text-muted-foreground">{selectedPM.primaryContact.phone} · {selectedPM.primaryContact.role}</div>
+                </div>
               </div>
-              <div>
-                <Label className="mb-1.5 block text-[12px]">Phone</Label>
-                <Input value={contactForm.phone} onChange={(e) => updateContact('phone', e.target.value)} placeholder="0987654321" className="h-9 text-[13px]" />
-              </div>
-            </div>
-            <div>
-              <Label className="mb-1.5 block text-[12px]">Email Address <span className="text-red-500">*</span></Label>
-              <Input type="email" value={contactForm.email} onChange={(e) => updateContact('email', e.target.value)} placeholder="contact@company.com" className="h-9 text-[13px]" />
-            </div>
-            <div>
-              <Label className="mb-1.5 block text-[12px]">Company <span className="text-red-500">*</span></Label>
-              <Select value={contactForm.company || '__none__'} onValueChange={(v) => updateContact('company', v === '__none__' ? '' : v)}>
-                <SelectTrigger className="h-9 text-[13px]"><SelectValue placeholder="Select company" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Select company</SelectItem>
-                  {companies.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="mb-1.5 block text-[12px]">Status</Label>
-              <Select value={contactForm.status} onValueChange={(v) => updateContact('status', v)}>
-                <SelectTrigger className="h-9 text-[13px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            )}
           </div>
-          {savedContact && (
+          {savedCompany && (
             <div className="px-5 pb-2">
               <Alert className="border-primary bg-primary text-primary-foreground [&>svg]:text-primary-foreground">
                 <CheckCircle2 className="h-4 w-4" />
-                <AlertDescription>Contact created successfully</AlertDescription>
+                <AlertDescription>Company added successfully</AlertDescription>
               </Alert>
             </div>
           )}
           <div className="flex items-center justify-between border-t bg-muted/40 px-5 py-4">
-            <Button variant="outline" size="sm" className="text-[13px]" onClick={() => setShowContactModal(false)}>Cancel</Button>
-            <Button size="sm" className="text-[13px]" onClick={handleSaveContact} disabled={!contactForm.name || !contactForm.email || !contactForm.company}>
-              Create Contact
+            <Button variant="outline" size="sm" className="text-[13px]" onClick={() => setShowCompanyModal(false)}>Cancel</Button>
+            <Button
+              size="sm"
+              className="text-[13px]"
+              onClick={handleAddCompany}
+              disabled={!selectedPmId || availablePMCompanies.length === 0}
+            >
+              Add Company
             </Button>
           </div>
         </DialogContent>

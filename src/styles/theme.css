@@ -59,14 +59,14 @@
   --chart-5: #f59e0b;
   
   /* Sidebar */
-  --sidebar: #7c3aed;
-  --sidebar-foreground: #ffffff;
-  --sidebar-muted: rgba(255, 255, 255, 0.12);
-  --sidebar-muted-foreground: rgba(255, 255, 255, 0.72);
-  --sidebar-accent: #c4b5fd;
-  --sidebar-accent-foreground: #1e1b4b;
-  --sidebar-border: rgba(255, 255, 255, 0.16);
-  --sidebar-ring: rgba(196, 181, 253, 0.5);
+  --sidebar: #f1ebfd;
+  --sidebar-foreground: #1e1b4b;
+  --sidebar-muted: rgba(124, 58, 237, 0.12);
+  --sidebar-muted-foreground: #64748b;
+  --sidebar-accent: #ffffff;
+  --sidebar-accent-foreground: #5b21b6;
+  --sidebar-border: rgba(124, 58, 237, 0.14);
+  --sidebar-ring: rgba(124, 58, 237, 0.35);
   
   /* Typography */
   --font-weight-normal: 400;
@@ -256,6 +256,14 @@
 }
 
 @layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
   /* ────────────────────────────────────────────────────────────────────────
      SEMANTIC COLOR PAIRS
      All status badges, alert banners, and inline semantic colours use

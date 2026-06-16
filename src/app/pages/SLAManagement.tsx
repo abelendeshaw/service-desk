@@ -4,7 +4,7 @@ import {
   FileText, Plus, Search, Upload, AlertTriangle,
   CheckCircle2, Clock, XCircle, Download,
   Filter, ArrowUpDown, Calendar, FileUp,
-  Mail, Inbox, Star, StarOff, RefreshCw, Tag, Paperclip, AlertCircle, ShieldCheck,
+  Mail, Inbox, Star, StarOff, RefreshCw, Paperclip, AlertCircle, ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '../components/ui/alert';
@@ -750,15 +750,6 @@ function EmailSupportTab() {
               </span>
             </Button>
           ))}
-          <div className="mt-4 border-t pt-3">
-            <div className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tags</div>
-            {['Network', 'Access', 'Infrastructure', 'CSAT', 'Critical'].map((tag) => (
-              <Button key={tag} variant="ghost" className="h-auto w-full justify-start gap-2 px-2 py-1.5 text-[12px]">
-                <Tag className="w-3 h-3" />
-                {tag}
-              </Button>
-            ))}
-          </div>
         </div>
 
         {/* Email List */}
@@ -817,7 +808,6 @@ function EmailSupportTab() {
                         <span className={`size-1.5 rounded-full ${sc.dotClass}`} />{email.status}
                       </Badge>
                       <Badge variant="outline" className={`text-[11px] ${pc.badgeClass}`}>{email.priority}</Badge>
-                      <span className="rounded border bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">{email.tag}</span>
                       {email.attachments > 0 && (
                         <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                           <Paperclip className="w-3 h-3" />{email.attachments}

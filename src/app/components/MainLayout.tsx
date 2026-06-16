@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Outlet, NavLink, useNavigate } from "react-router";
+import { Outlet, NavLink, useNavigate, useLocation } from "react-router";
 import { toast } from "sonner";
 import {
   LayoutDashboard,
@@ -12,9 +12,7 @@ import {
   PanelLeftOpen,
   Bell,
   Search,
-  ChevronDown,
   LogOut,
-  Plus,
   HelpCircle,
   Mail,
   BarChart2,
@@ -84,10 +82,26 @@ const navGroups = [
   {
     label: "Directory",
     items: [
-      { name: "Contacts", href: "/contacts", icon: Users, exact: false },
+      { name: "Clients", href: "/clients", icon: Users, exact: false },
     ],
   },
 ];
+
+function isNavItemActive(href: string, pathname: string, exact?: boolean) {
+  if (href === "/knowledge") {
+    return pathname.startsWith("/knowledge");
+  }
+  if (href === "/tickets") {
+    return (
+      (pathname.startsWith("/tickets") || pathname.startsWith("/email-support")) &&
+      !pathname.startsWith("/knowledge")
+    );
+  }
+  if (exact) {
+    return pathname === href;
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function MainLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -96,6 +110,7 @@ export function MainLayout() {
   const [notifFilter, setNotifFilter] = useState<"all" | "unread">("all");
   const notifRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
   const { notifications, markNotificationsRead, markNotificationRead, dismissNotification } = useServiceDesk();
   const unreadCount = notifications.filter((n) => n.unread).length;
@@ -138,7 +153,7 @@ export function MainLayout() {
                 <Ticket className="text-secondary-foreground w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-white text-sm font-semibold leading-tight truncate">
+                <div className="text-sidebar-foreground text-sm font-semibold leading-tight truncate">
                   Service Desk
                 </div>
                 <div className="text-sidebar-foreground/60 text-xs leading-tight">
@@ -199,26 +214,25 @@ export function MainLayout() {
                 </div>
               )}
               <div className="flex flex-col gap-0.5">
-                {group.items.map((item) => (
+                {group.items.map((item) => {
+                  const active = isNavItemActive(item.href, location.pathname, item.exact);
+                  return (
                   <NavLink
                     key={item.name}
                     to={item.href}
                     end={item.exact}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-2 py-2 rounded-md transition-all duration-100 group relative ${
-                        isActive
-                          ? "bg-white text-primary dark:bg-sidebar-muted dark:text-sidebar-foreground"
-                          : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
-                      } ${sidebarCollapsed ? "justify-center" : ""}`
-                    }
+                    className={`flex items-center gap-3 px-2 py-2 rounded-md transition-all duration-100 group relative ${
+                      active
+                        ? "bg-white text-primary dark:bg-sidebar-muted dark:text-sidebar-foreground"
+                        : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                    } ${sidebarCollapsed ? "justify-center" : ""}`}
                   >
-                    {({ isActive }) => (
                       <>
-                        {isActive && !sidebarCollapsed && (
+                        {active && !sidebarCollapsed && (
                           <div className="bg-sidebar-accent absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full" />
                         )}
                         <item.icon
-                          className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-primary dark:text-sidebar-foreground" : ""}`}
+                          className={`w-4 h-4 flex-shrink-0 ${active ? "text-primary dark:text-sidebar-foreground" : ""}`}
                         />
                         {!sidebarCollapsed && (
                           <span className="text-[13px] font-medium truncate">
@@ -226,9 +240,9 @@ export function MainLayout() {
                           </span>
                         )}
                       </>
-                    )}
                   </NavLink>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -294,47 +308,13 @@ export function MainLayout() {
             <div className="relative">
               <Search className="text-muted-foreground absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
               <Input
-                placeholder="Search tickets, contacts..."
+                placeholder="Search tickets, clients..."
                 className="h-8 w-64 pl-9 pr-4 text-[13px]"
               />
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="h-8 gap-1.5 px-3 text-[13px]" size="sm">
-                  <Plus className="w-3.5 h-3.5" />
-                  New
-                  <ChevronDown className="w-3 h-3 opacity-60" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem
-                  onSelect={() => navigate("/tickets/new")}
-                  className="text-[13px]"
-                >
-                  <Ticket className="w-3.5 h-3.5 mr-2" />
-                  New Ticket
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => navigate("/email-support/new")}
-                  className="text-[13px]"
-                >
-                  <Mail className="w-3.5 h-3.5 mr-2" />
-                  Compose Email
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={() => navigate("/contacts")}
-                  className="text-[13px]"
-                >
-                  <Users className="w-3.5 h-3.5 mr-2" />
-                  New Contact
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
             <div className="relative" ref={notifRef}>
               <Button
                 variant="ghost"
@@ -523,7 +503,7 @@ export function MainLayout() {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <Outlet />
         </main>
       </div>

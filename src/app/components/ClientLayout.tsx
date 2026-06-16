@@ -113,7 +113,7 @@ export function ClientLayout() {
                 <MonitorSmartphone className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-white text-sm font-semibold leading-tight truncate">Client Portal</div>
+                <div className="text-sidebar-foreground text-sm font-semibold leading-tight truncate">Client Portal</div>
                 <div className="text-sidebar-foreground/60 text-xs leading-tight truncate">{user.company}</div>
               </div>
             </div>
@@ -131,7 +131,7 @@ export function ClientLayout() {
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto py-3 px-2">
           {!sidebarCollapsed && (
             <div className="mb-2 px-2">
-              <Badge variant="secondary" className="bg-violet-500/20 text-violet-100 border-violet-400/20 text-[10px]">
+              <Badge variant="secondary" className="bg-violet-500/15 text-violet-700 border-violet-400/25 text-[10px]">
                 Client Workspace
               </Badge>
             </div>
@@ -291,7 +291,7 @@ export function ClientLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <Outlet />
         </main>
       </div>

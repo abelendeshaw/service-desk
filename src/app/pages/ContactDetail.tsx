@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import {
   ArrowLeft, Building2, Globe, Mail, Phone,
-  User, Plus, ExternalLink, ShieldCheck,
-  CheckCircle2, Paperclip, Inbox,
+  User, Plus, ExternalLink, ShieldCheck, FolderKanban,
+  CheckCircle2,
   Ticket as TicketIcon,
 } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
@@ -18,132 +18,6 @@ import {
   calcSLAStatus, calcRemainingTime, calcDurationLabel,
   calcSupportType, slaStatusConfig,
 } from './SLAManagement';
-
-// ---------------------------------------------------------------------------
-// Shared contact data
-// ---------------------------------------------------------------------------
-
-const contactsData = [
-  {
-    name: 'EPSS Client', email: 'epss@gmail.com', phone: '0987654321',
-    role: 'Primary Contact', status: 'Active', initials: 'EP', color: '#7c3aed',
-    company: 'EPSS', companyDesc: 'Electric Power Systems Services',
-    tier: 'Enterprise', tickets: 18, activeTickets: 12,
-    companyPhone: '+251 11 555 0001', companyWebsite: 'https://epss.example.com',
-  },
-  {
-    name: 'ESLSE Client', email: 'eslse@gmail.com', phone: '0987654321',
-    role: 'Primary Contact', status: 'Active', initials: 'ES', color: '#1d4ed8',
-    company: 'ESLSE', companyDesc: 'Ethiopian Shipping and Logistics Services',
-    tier: 'Enterprise', tickets: 6, activeTickets: 3,
-    companyPhone: '+251 11 555 0005', companyWebsite: 'https://eslse.example.com',
-  },
-  {
-    name: 'IE Client', email: 'ie@gmail.com', phone: '0987654321',
-    role: 'Technical Contact', status: 'Active', initials: 'IE', color: '#0891b2',
-    company: 'IE', companyDesc: 'Innovation Ethiopia',
-    tier: 'Enterprise', tickets: 38, activeTickets: 25,
-    companyPhone: '+251 11 555 0002', companyWebsite: 'https://ie.example.com',
-  },
-  {
-    name: 'EOTC Client', email: 'eotc@gmail.com', phone: '0987654321',
-    role: 'Primary Contact', status: 'Active', initials: 'EO', color: '#7c3aed',
-    company: 'EOTC', companyDesc: 'Ethiopian Orthodox Tewahedo Church',
-    tier: 'Standard', tickets: 2, activeTickets: 1,
-    companyPhone: '+251 11 555 0006', companyWebsite: 'https://eotc.example.com',
-  },
-  {
-    name: 'ERA/MOTL Client', email: 'eramotl@gmail.com', phone: '0987654321',
-    role: 'Primary Contact', status: 'Active', initials: 'ER', color: '#059669',
-    company: 'ERA/MOTL', companyDesc: 'Government agency focused on infrastructure',
-    tier: 'Enterprise', tickets: 16, activeTickets: 9,
-    companyPhone: '+251 11 555 0007', companyWebsite: 'https://era.example.com',
-  },
-  {
-    name: 'MinT Client', email: 'mint@gmail.com', phone: '0987654321',
-    role: 'Technical Contact', status: 'Inactive', initials: 'MI', color: '#6b7280',
-    company: 'MinT', companyDesc: 'Ministry of Innovation and Technology',
-    tier: 'Enterprise', tickets: 17, activeTickets: 11,
-    companyPhone: '+251 11 555 0008', companyWebsite: 'https://mint.example.com',
-  },
-  {
-    name: 'MoTI Client', email: 'moti@gmail.com', phone: '0987654321',
-    role: 'Primary Contact', status: 'Active', initials: 'MO', color: '#6366f1',
-    company: 'MoTI', companyDesc: 'Ministry of Trade and Industry',
-    tier: 'Premium', tickets: 10, activeTickets: 7,
-    companyPhone: '+251 11 555 0009', companyWebsite: 'https://moti.example.com',
-  },
-  {
-    name: 'CSA Client', email: 'csa@gmail.com', phone: '0987654321',
-    role: 'Technical Contact', status: 'Active', initials: 'CS', color: '#0891b2',
-    company: 'CSA', companyDesc: 'Central Statistics Agency',
-    tier: 'Enterprise', tickets: 6, activeTickets: 2,
-    companyPhone: '+251 11 555 0003', companyWebsite: 'https://csa.example.com',
-  },
-  {
-    name: 'Abay Bank Client', email: 'abaybank@gmail.com', phone: '0987654321',
-    role: 'Primary Contact', status: 'Active', initials: 'AB', color: '#dc2626',
-    company: 'Abay Bank', companyDesc: 'Private commercial bank',
-    tier: 'Premium', tickets: 9, activeTickets: 4,
-    companyPhone: '+251 11 555 0004', companyWebsite: 'https://abay.example.com',
-  },
-  {
-    name: 'MoWS Client', email: 'mows@gmail.com', phone: '0987654321',
-    role: 'Technical Contact', status: 'Active', initials: 'MW', color: '#d97706',
-    company: 'MoWS', companyDesc: 'Ministry of Water and Sanitation',
-    tier: 'Standard', tickets: 13, activeTickets: 8,
-    companyPhone: '+251 11 555 0010', companyWebsite: 'https://mows.example.com',
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Email support data (mirrored from SLAManagement)
-// ---------------------------------------------------------------------------
-
-const emailData = [
-  {
-    id: 'EM-001', from: 'EPSS Client', fromEmail: 'epss@gmail.com', initials: 'EP', color: '#7c3aed',
-    subject: 'Urgent: FortiGate firewall dropping VPN sessions intermittently',
-    preview: 'We are experiencing frequent VPN session drops on our FortiGate firewall at the Addis Ababa data center. This is affecting...',
-    date: '10:32 AM', status: 'Open', priority: 'Critical', unread: true, starred: false, attachments: 1, tag: 'Network',
-  },
-  {
-    id: 'EM-002', from: 'IE Client', fromEmail: 'ie@gmail.com', initials: 'IE', color: '#0891b2',
-    subject: 'Request: New user account creation for 3 staff members',
-    preview: 'Good morning, we need to create new Active Directory accounts for 3 new staff joining next Monday. Please find the details attached.',
-    date: 'Yesterday', status: 'Pending', priority: 'Low', unread: false, starred: true, attachments: 0, tag: 'Access',
-  },
-  {
-    id: 'EM-003', from: 'MinT Client', fromEmail: 'mint@gmail.com', initials: 'MI', color: '#6b7280',
-    subject: 'Follow-up on network latency issue reported last week',
-    preview: 'We wanted to follow up on the network latency issue we reported last week. The problem persists during peak hours between 9AM and 12PM.',
-    date: 'Yesterday', status: 'Open', priority: 'High', unread: false, starred: false, attachments: 2, tag: 'Network',
-  },
-  {
-    id: 'EM-004', from: 'CSA Client', fromEmail: 'csa@gmail.com', initials: 'CS', color: '#0891b2',
-    subject: 'Monthly report request — Q1 2026 system uptime and incident summary',
-    preview: 'Please provide the monthly uptime and incident report for Q1 2026. The management team needs this by end of week for their review.',
-    date: 'Apr 12', status: 'Closed', priority: 'Medium', unread: false, starred: false, attachments: 0, tag: 'Reporting',
-  },
-  {
-    id: 'EM-005', from: 'ERA/MOTL Client', fromEmail: 'eramotl@gmail.com', initials: 'ER', color: '#059669',
-    subject: 'Infrastructure upgrade proposal — need technical review',
-    preview: 'We are planning to upgrade our server infrastructure and would like a technical review of our proposed setup before proceeding.',
-    date: 'Apr 11', status: 'Open', priority: 'Medium', unread: true, starred: false, attachments: 3, tag: 'Infrastructure',
-  },
-  {
-    id: 'EM-006', from: 'MoWS Client', fromEmail: 'mows@gmail.com', initials: 'MW', color: '#d97706',
-    subject: 'CSAT Survey Response — Technical Support Feedback',
-    preview: 'Thank you for the recent support engagement. We have completed the CSAT survey and wanted to share our feedback directly as well.',
-    date: 'Apr 10', status: 'Closed', priority: 'Low', unread: false, starred: false, attachments: 0, tag: 'CSAT',
-  },
-  {
-    id: 'EM-007', from: 'Abay Bank Client', fromEmail: 'abaybank@gmail.com', initials: 'AB', color: '#dc2626',
-    subject: 'Critical: Core banking system cannot connect to backup server',
-    preview: 'URGENT — Our core banking application is failing to connect to the backup server since this morning. Transactions are being affected.',
-    date: 'Apr 9', status: 'Closed', priority: 'Critical', unread: false, starred: true, attachments: 1, tag: 'Critical',
-  },
-];
 
 // ---------------------------------------------------------------------------
 // Config maps
@@ -169,24 +43,11 @@ const ticketPriorityConfig: Record<string, { badgeClass: string }> = {
   Low:      { badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
 };
 
-const emailPriorityConfig: Record<string, { badgeClass: string }> = {
-  Critical: { badgeClass: 'bg-red-50 text-red-700 border-red-200' },
-  High:     { badgeClass: 'bg-orange-50 text-orange-700 border-orange-200' },
-  Medium:   { badgeClass: 'bg-amber-50 text-amber-700 border-amber-200' },
-  Low:      { badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-};
-
-const emailStatusCfg: Record<string, { badgeClass: string; dotClass: string }> = {
-  Open:    { badgeClass: 'bg-blue-50 text-blue-700 border-blue-200',     dotClass: 'bg-blue-500' },
-  Pending: { badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',  dotClass: 'bg-amber-500' },
-  Closed:  { badgeClass: 'bg-muted text-muted-foreground border-border', dotClass: 'bg-muted-foreground' },
-};
-
 // ---------------------------------------------------------------------------
 // Tab type
 // ---------------------------------------------------------------------------
 
-type Tab = 'overview' | 'agreements' | 'emails' | 'tickets';
+type Tab = 'overview' | 'projects' | 'tickets';
 
 // ---------------------------------------------------------------------------
 // Component
@@ -195,31 +56,30 @@ type Tab = 'overview' | 'agreements' | 'emails' | 'tickets';
 export function ContactDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { slas, tickets } = useServiceDesk();
+  const { slas, tickets, clients } = useServiceDesk();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
   const contact = useMemo(
-    () => contactsData.find((c) => c.email === decodeURIComponent(id ?? '')) ?? contactsData[0],
-    [id],
+    () => clients.find((c) => c.id === decodeURIComponent(id ?? '').toLowerCase()),
+    [clients, id],
   );
 
   // Match SLAs: exact match or "company startsWith" (handles "IE Innovation Ethiopia" → "IE")
   const contactSLAs = useMemo(() => {
+    if (!contact) return [];
     const c = contact.company.toLowerCase();
     return slas.filter((s) => {
       const sc = s.companyName.toLowerCase();
       return sc === c || sc.startsWith(c + ' ');
     });
-  }, [slas, contact.company]);
+  }, [slas, contact]);
 
   const contactTickets = useMemo(
-    () => tickets.filter((t) => t.contactName === contact.name || t.project === contact.company),
+    () =>
+      contact
+        ? tickets.filter((t) => t.project === contact.company || t.contactName === contact.name)
+        : [],
     [tickets, contact],
-  );
-
-  const contactEmails = useMemo(
-    () => emailData.filter((e) => e.fromEmail === contact.email),
-    [contact.email],
   );
 
   const slaStats = useMemo(() => {
@@ -241,10 +101,20 @@ export function ContactDetail() {
     [contactSLAs],
   );
 
+  if (!contact) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center bg-muted/30 p-6">
+        <p className="text-[14px] font-medium">Client not found</p>
+        <Button variant="link" className="mt-2" onClick={() => navigate('/clients')}>
+          Back to Clients
+        </Button>
+      </div>
+    );
+  }
+
   const tabs = [
     { id: 'overview' as Tab,    label: 'Overview',            icon: User,          count: 0 },
-    { id: 'agreements' as Tab,  label: 'Service Agreements',  icon: ShieldCheck,   count: contactSLAs.length },
-    { id: 'emails' as Tab,      label: 'Support Emails',      icon: Mail,          count: contactEmails.length },
+    { id: 'projects' as Tab,   label: 'Projects',            icon: FolderKanban,  count: contactSLAs.length },
     { id: 'tickets' as Tab,     label: 'Tickets',             icon: TicketIcon,    count: contactTickets.length },
   ];
 
@@ -256,10 +126,10 @@ export function ContactDetail() {
           <Button
             variant="ghost" size="sm"
             className="gap-1.5 text-[13px] text-muted-foreground -ml-2"
-            onClick={() => navigate('/contacts')}
+            onClick={() => navigate('/clients')}
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            Contacts
+            Clients
           </Button>
         </div>
         <div className="flex items-center justify-between">
@@ -286,10 +156,6 @@ export function ContactDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5 text-[13px]">
-              <Mail className="w-3.5 h-3.5" />
-              Send Email
-            </Button>
             <Button size="sm" className="gap-1.5 text-[13px]" onClick={() => navigate('/tickets/new')}>
               <Plus className="w-3.5 h-3.5" />
               New Ticket
@@ -432,14 +298,14 @@ export function ContactDetail() {
                       <div className="flex items-center justify-between">
                         <CardTitle className="flex items-center gap-2 text-[14px]">
                           <ShieldCheck className="w-4 h-4 text-muted-foreground" />
-                          Active Service Agreement
+                          Active Project
                         </CardTitle>
                         <Button
                           variant="outline" size="sm"
                           className="gap-1.5 text-[12px] h-7 px-2.5"
-                          onClick={() => setActiveTab('agreements')}
+                          onClick={() => setActiveTab('projects')}
                         >
-                          View all agreements
+                          View all projects
                         </Button>
                       </div>
                     </CardHeader>
@@ -537,13 +403,13 @@ export function ContactDetail() {
           </div>
         )}
 
-        {/* ════════ SERVICE AGREEMENTS ════════ */}
-        {activeTab === 'agreements' && (
+        {/* ════════ PROJECTS ════════ */}
+        {activeTab === 'projects' && (
           <div className="flex flex-col min-h-full">
             {/* Stats row */}
             <div className="flex items-center gap-5 border-b bg-background px-6 py-3 flex-shrink-0">
               <div className="text-[12px] text-muted-foreground">
-                <span className="font-semibold text-foreground">{slaStats.total}</span> agreement{slaStats.total !== 1 ? 's' : ''}
+                <span className="font-semibold text-foreground">{slaStats.total}</span> project{slaStats.total !== 1 ? 's' : ''}
               </div>
               {slaStats.active > 0 && (
                 <div className="flex items-center gap-1.5 text-[12px]">
@@ -626,97 +492,12 @@ export function ContactDetail() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                   <div className="flex size-12 items-center justify-center rounded-xl bg-muted">
-                    <ShieldCheck className="w-6 h-6 text-muted-foreground" />
+                    <FolderKanban className="w-6 h-6 text-muted-foreground" />
                   </div>
                   <div className="text-center">
-                    <div className="text-[14px] font-medium">No service agreements</div>
+                    <div className="text-[14px] font-medium">No projects</div>
                     <div className="mt-1 text-[13px] text-muted-foreground">
-                      No SLAs have been created for {contact.company}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ════════ SUPPORT EMAILS ════════ */}
-        {activeTab === 'emails' && (
-          <div className="flex flex-col min-h-full">
-            <div className="flex-1 overflow-auto">
-              {contactEmails.length > 0 ? (
-                <Table>
-                  <TableHeader className="sticky top-0 z-10 bg-background">
-                    <TableRow>
-                      <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Subject</TableHead>
-                      <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tag</TableHead>
-                      <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Priority</TableHead>
-                      <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
-                      <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody className="bg-background">
-                    {contactEmails.map((email) => {
-                      const priCfg = emailPriorityConfig[email.priority] ?? emailPriorityConfig.Medium;
-                      const stCfg = emailStatusCfg[email.status] ?? emailStatusCfg.Open;
-                      return (
-                        <TableRow
-                          key={email.id}
-                          className="cursor-pointer hover:bg-muted/30"
-                          onClick={() => navigate(`/email-support/${email.id}`)}
-                        >
-                          <TableCell className="px-4 py-3.5">
-                            <div className="flex items-start gap-2">
-                              {email.unread && (
-                                <div className="mt-1.5 size-1.5 rounded-full bg-primary flex-shrink-0" />
-                              )}
-                              <div className="min-w-0">
-                                <div className={`text-[13px] ${email.unread ? 'font-semibold' : 'font-medium'}`}>
-                                  {email.subject}
-                                </div>
-                                <div className="text-[11px] text-muted-foreground mt-0.5 truncate max-w-[320px]">
-                                  {email.preview}
-                                </div>
-                                {email.attachments > 0 && (
-                                  <div className="flex items-center gap-1 mt-1 text-[11px] text-muted-foreground">
-                                    <Paperclip className="w-3 h-3" />
-                                    {email.attachments} attachment{email.attachments !== 1 ? 's' : ''}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-4 py-3.5">
-                            <Badge variant="outline" className="text-[11px] text-muted-foreground">{email.tag}</Badge>
-                          </TableCell>
-                          <TableCell className="px-4 py-3.5">
-                            <Badge variant="outline" className={`text-[11px] ${priCfg.badgeClass}`}>
-                              {email.priority}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="px-4 py-3.5">
-                            <Badge variant="outline" className={`gap-1 text-[11px] ${stCfg.badgeClass}`}>
-                              <span className={`size-1.5 rounded-full ${stCfg.dotClass}`} />
-                              {email.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="px-4 py-3.5 text-[12px] text-muted-foreground whitespace-nowrap">
-                            {email.date}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-20 gap-3">
-                  <div className="flex size-12 items-center justify-center rounded-xl bg-muted">
-                    <Inbox className="w-6 h-6 text-muted-foreground" />
-                  </div>
-                  <div className="text-center">
-                    <div className="text-[14px] font-medium">No support emails</div>
-                    <div className="mt-1 text-[13px] text-muted-foreground">
-                      No email requests from {contact.name}
+                      No projects have been created for {contact.company}
                     </div>
                   </div>
                 </div>

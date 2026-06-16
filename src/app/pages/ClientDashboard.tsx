@@ -293,8 +293,7 @@ export function ClientDashboard() {
               ))}
               {myArticles.length === 0 && (
                 <div className="px-5 py-8 text-center text-[13px] text-muted-foreground">
-                  No published articles yet.{" "}
-                  <button className="text-violet-600 underline" onClick={() => navigate("/client/knowledge/new")}>Create one</button>
+                  No published articles yet.
                 </div>
               )}
             </div>

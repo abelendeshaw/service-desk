@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { Search, Plus, Grid3X3, List, FileSearch, BookOpen } from "lucide-react";
+import { Search, Grid3X3, List, FileSearch, BookOpen } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
@@ -52,10 +52,6 @@ export function ClientKnowledgeBase() {
               Your organization&apos;s articles · {myArticles.length} total
             </p>
           </div>
-          <Button size="sm" className="gap-1.5 text-[13px] bg-violet-600 hover:bg-violet-700" onClick={() => navigate("/client/knowledge/new")}>
-            <Plus className="w-3.5 h-3.5" />
-            New Article
-          </Button>
         </div>
       </div>
 
@@ -98,15 +94,9 @@ export function ClientKnowledgeBase() {
           <div className="text-center">
             <div className="text-[14px] font-medium">No articles yet</div>
             <div className="mt-1 text-[13px] text-muted-foreground">
-              {search ? "Try a different search term" : "Create your first knowledge base article"}
+              {search ? "Try a different search term" : "No articles are available yet"}
             </div>
           </div>
-          {!search && (
-            <Button size="sm" className="gap-1.5 bg-violet-600 hover:bg-violet-700" onClick={() => navigate("/client/knowledge/new")}>
-              <Plus className="w-3.5 h-3.5" />
-              Create Article
-            </Button>
-          )}
         </div>
       ) : viewMode === "list" ? (
         <div className="flex-1 overflow-auto">

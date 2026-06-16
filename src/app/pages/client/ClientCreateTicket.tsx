@@ -88,20 +88,23 @@ export function ClientCreateTicket() {
   };
 
   return (
-    <div className="min-h-full bg-muted/30 p-6">
-      <div className="mx-auto max-w-2xl">
-        <div className="mb-6 flex items-center gap-3">
-          <Button variant="outline" size="icon" className="size-8" onClick={() => navigate("/client/tickets")}>
+    <div className="flex min-h-full flex-col bg-muted/30">
+      <div className="bg-sidebar border-sidebar-border flex-shrink-0 border-b px-6 py-5">
+        <div className="mx-auto flex max-w-2xl items-center gap-3">
+          <Button variant="outline" size="icon" className="size-8 border-violet-400/25 bg-white" onClick={() => navigate("/client/tickets")}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-[20px] font-semibold tracking-tight">Submit Ticket</h1>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">
+            <h1 className="text-sidebar-foreground text-[20px] font-semibold tracking-tight">Submit Ticket</h1>
+            <p className="text-sidebar-muted-foreground mt-0.5 text-[13px]">
               Request support for {user.company}
             </p>
           </div>
         </div>
+      </div>
 
+      <div className="flex-1 p-6">
+      <div className="mx-auto max-w-2xl">
         <div className="mb-6 flex items-center gap-2">
           {steps.map((s, i) => (
             <div key={s} className="flex items-center gap-2">
@@ -251,6 +254,7 @@ export function ClientCreateTicket() {
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

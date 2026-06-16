@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import {
-  Search, Plus,
-  ArrowUpDown, AlertCircle
+  Search, Plus, Mail,
+  ArrowUpDown, AlertCircle, Ticket as TicketIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
@@ -36,6 +36,9 @@ import {
 } from '../components/ui/table';
 import { RowActionsMenu } from '../components/RowActionsMenu';
 import { useServiceDesk } from '../store/serviceDeskStore';
+import { EmailSupportPanel } from './EmailSupport';
+
+type TicketsTab = 'tickets' | 'email';
 
 const statusConfig: Record<string, { dotClass: string; badgeClass: string }> = {
   Open: { dotClass: 'bg-blue-500', badgeClass: 'bg-blue-50 text-blue-700 border-blue-200' },
@@ -56,6 +59,8 @@ const avatarColors = ['#7c3aed', '#1d4ed8', '#0891b2', '#059669', '#d97706', '#d
 
 export function Tickets() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab: TicketsTab = searchParams.get('tab') === 'email' ? 'email' : 'tickets';
   const { tickets, engineers } = useServiceDesk();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -108,26 +113,80 @@ export function Tickets() {
     { label: 'Closed', value: tickets.filter(t => t.status === 'Closed').length, color: '#6c757d' },
   ];
 
+  const setActiveTab = (tab: TicketsTab) => {
+    if (tab === 'email') {
+      setSearchParams({ tab: 'email' });
+    } else {
+      setSearchParams({});
+    }
+  };
+
+  const pageTabs = [
+    { id: 'tickets' as TicketsTab, label: 'Tickets', icon: TicketIcon },
+    { id: 'email' as TicketsTab, label: 'Email Support', icon: Mail },
+  ];
+
   return (
     <div className="flex h-full flex-col bg-muted/30">
       {/* Page Header */}
-      <div className="border-b bg-background px-6 py-4">
+      <div className="border-b bg-background px-6 pt-4 pb-0 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-[20px] font-semibold tracking-tight">Tickets</h1>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">Manage and track all support tickets</p>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">
+              {activeTab === 'tickets'
+                ? 'Manage and track all support tickets'
+                : 'Client email conversations and support requests'}
+            </p>
           </div>
-          <Button
-            onClick={() => navigate('/tickets/new')}
-            size="sm"
-            className="text-[13px]"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            New Ticket
-          </Button>
+          {activeTab === 'tickets' ? (
+            <Button
+              onClick={() => navigate('/tickets/new')}
+              size="sm"
+              className="text-[13px]"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New Ticket
+            </Button>
+          ) : (
+            <Button
+              onClick={() => navigate('/email-support/new')}
+              size="sm"
+              className="gap-1.5 text-[13px]"
+            >
+              <Mail className="w-3.5 h-3.5" />
+              Send Email
+            </Button>
+          )}
         </div>
 
-        {/* Quick Stats */}
+        <div className="flex">
+          {pageTabs.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setActiveTab(t.id)}
+              className={`flex items-center gap-1.5 mr-6 px-0 py-3 text-[13px] font-medium border-b-2 transition-colors ${
+                activeTab === t.id
+                  ? 'border-primary text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <t.icon className="w-3.5 h-3.5" />
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {activeTab === 'email' ? (
+        <div className="flex-1 min-h-0">
+          <EmailSupportPanel embedded />
+        </div>
+      ) : (
+        <>
+      {/* Quick Stats */}
+      <div className="border-b bg-background px-6 py-4">
         <div className="flex items-center gap-1">
           {stats.map((s, i) => (
             <Button
@@ -365,6 +424,8 @@ export function Tickets() {
           </PaginationContent>
         </Pagination>
       </div>
+        </>
+      )}
     </div>
   );
 }

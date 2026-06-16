@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   Mail,
   Users,
-  Tag,
   ChevronRight,
   Info,
   Bold,
@@ -39,7 +38,6 @@ export function CreateEmailSupport() {
     subject: '',
     body: '',
     priority: 'Medium',
-    tag: '',
     fieldEngineer: '',
     team: '',
   });
@@ -67,7 +65,7 @@ export function CreateEmailSupport() {
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <button
-            onClick={() => navigate('/email-support')}
+            onClick={() => navigate('/tickets?tab=email')}
             className="w-8 h-8 flex items-center justify-center text-[#6c757d] hover:text-[#0b2235] hover:bg-white border border-[#e1e4e8] rounded-md transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -157,7 +155,7 @@ export function CreateEmailSupport() {
                 {/* Subject & Body */}
                 <div className="bg-white border border-[#e1e4e8] rounded-lg p-5">
                   <div className="flex items-center gap-2 mb-4">
-                    <Tag className="w-4 h-4 text-[#9ca3af]" />
+                    <Mail className="w-4 h-4 text-[#9ca3af]" />
                     <h3 className="text-[14px] font-semibold text-[#0b2235]">Message</h3>
                   </div>
                   <div className="space-y-4">
@@ -271,18 +269,6 @@ export function CreateEmailSupport() {
                       <option>Mebrate Degu</option>
                     </select>
                   </div>
-                  <div>
-                    <label className={labelClasses}>Tag</label>
-                    <select value={form.tag} onChange={e => update('tag', e.target.value)} className={selectClasses}>
-                      <option value="">Select tag (optional)</option>
-                      <option>Network</option>
-                      <option>Access</option>
-                      <option>Infrastructure</option>
-                      <option>Reporting</option>
-                      <option>CSAT</option>
-                      <option>Critical</option>
-                    </select>
-                  </div>
 
                   <div className="p-3 bg-[#f8f9fa] rounded-md border border-[#e1e4e8]">
                     <div className="text-[11px] font-semibold text-[#4b5563] mb-2">Routing Preview</div>
@@ -351,7 +337,6 @@ export function CreateEmailSupport() {
                     { label: 'Team', value: form.team || '—' },
                     { label: 'Field Engineer', value: form.fieldEngineer || 'Auto-assign' },
                     { label: 'Priority', value: form.priority },
-                    { label: 'Tag', value: form.tag || 'None' },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex items-center gap-4 py-2.5 border-b border-[#f8f9fa] last:border-0">
                       <div className="text-[12px] text-[#9ca3af] w-24 flex-shrink-0">{label}</div>
@@ -437,7 +422,7 @@ export function CreateEmailSupport() {
         {/* Navigation */}
         <div className="flex items-center justify-between mt-6 pt-5 border-t border-[#e1e4e8]">
           <button
-            onClick={() => step > 0 ? setStep(s => s - 1) : navigate('/email-support')}
+            onClick={() => step > 0 ? setStep(s => s - 1) : navigate('/tickets?tab=email')}
             className="flex items-center gap-1.5 h-9 px-4 text-[13px] font-medium text-[#6c757d] border border-[#e1e4e8] rounded-md bg-white hover:border-[#0b2235] hover:text-[#0b2235] transition-colors"
           >
             {step === 0 ? 'Cancel' : 'Back'}
@@ -452,7 +437,7 @@ export function CreateEmailSupport() {
             </button>
           ) : (
             <button
-              onClick={() => navigate('/email-support')}
+              onClick={() => navigate('/tickets?tab=email')}
               className="flex items-center gap-1.5 h-9 px-4 text-[13px] font-medium text-white bg-[#059669] rounded-md hover:bg-[#047857] transition-colors"
             >
               <Send className="w-3.5 h-3.5" />

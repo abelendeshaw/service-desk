@@ -16,7 +16,6 @@ import {
   Star,
   StarOff,
   Ticket,
-  Tag,
   ChevronDown,
   X,
   Bold,
@@ -85,7 +84,7 @@ export function EmailSupportDetail() {
       {/* Top Action Bar */}
       <div className="flex h-[48px] shrink-0 items-center gap-1 border-b bg-background px-6">
         <Button
-          onClick={() => navigate('/email-support')}
+          onClick={() => navigate('/tickets?tab=email')}
           variant="ghost"
           size="sm"
           className="h-7 gap-1.5 px-2.5 text-[12px]"
@@ -161,9 +160,6 @@ export function EmailSupportDetail() {
                   </div>
                   <Badge variant="outline" className="text-[11px] bg-red-50 text-red-700 border-red-200">
                     {priority}
-                  </Badge>
-                  <Badge variant="outline" className="text-[11px]">
-                    {thread.tag ?? "—"}
                   </Badge>
                 </div>
               </div>
@@ -395,19 +391,6 @@ export function EmailSupportDetail() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <div className="mb-1 text-[11px] text-muted-foreground">Tag</div>
-                <Select defaultValue="Network">
-                  <SelectTrigger className="h-8 text-[12px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Network">Network</SelectItem>
-                    <SelectItem value="Access">Access</SelectItem>
-                    <SelectItem value="Infrastructure">Infrastructure</SelectItem>
-                    <SelectItem value="CSAT">CSAT</SelectItem>
-                    <SelectItem value="Critical">Critical</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             <Button className="mt-4 h-8 w-full text-[13px]">Update</Button>
           </CardContent>
@@ -452,10 +435,6 @@ export function EmailSupportDetail() {
               <Button variant="outline" className="h-8 w-full justify-start gap-2 px-3 text-[12px]">
                 <Ticket className="w-3.5 h-3.5" />
                 Convert to Ticket
-              </Button>
-              <Button variant="outline" className="h-8 w-full justify-start gap-2 px-3 text-[12px]">
-                <Tag className="w-3.5 h-3.5" />
-                Add Tag
               </Button>
             </CardContent>
           </Card>

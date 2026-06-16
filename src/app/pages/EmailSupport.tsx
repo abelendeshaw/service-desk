@@ -5,23 +5,16 @@ import {
   Search,
   Plus,
   Mail,
-  Inbox,
-  Send,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
   Paperclip,
   Star,
   StarOff,
   RefreshCw,
   Filter,
-  Tag,
   ArrowUpDown,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import { Card, CardContent } from '../components/ui/card';
 import { Checkbox } from '../components/ui/checkbox';
 import { Input } from '../components/ui/input';
 import { RowActionsMenu } from '../components/RowActionsMenu';
@@ -171,7 +164,19 @@ const folderCounts = {
   Starred: emails.filter(e => e.starred).length,
 };
 
-export function EmailSupport() {
+const folderColors: Record<keyof typeof folderCounts, string> = {
+  All: '#0b2235',
+  Open: '#2563eb',
+  Pending: '#d97706',
+  Closed: '#6c757d',
+  Starred: '#eab308',
+};
+
+type EmailSupportPanelProps = {
+  embedded?: boolean;
+};
+
+export function EmailSupportPanel({ embedded = false }: EmailSupportPanelProps) {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [folder, setFolder] = useState<'All' | 'Open' | 'Pending' | 'Closed' | 'Starred'>('All');
@@ -188,125 +193,84 @@ export function EmailSupport() {
     return true;
   });
 
-  const unreadCount = emails.filter(e => e.unread).length;
-
-  const stats = [
-    { label: 'Total Emails', value: emails.length, icon: Mail, color: '#0b2235' },
-    { label: 'Unread', value: unreadCount, icon: Inbox, color: '#2563eb' },
-    { label: 'Open', value: folderCounts.Open, icon: AlertCircle, color: '#d97706' },
-    { label: 'Resolved Today', value: 4, icon: CheckCircle2, color: '#059669' },
-  ];
+  const folderOptions = Object.keys(folderCounts) as Array<keyof typeof folderCounts>;
 
   return (
-    <div className="flex h-full flex-col bg-muted/30">
-      {/* Header */}
-      <div className="border-b bg-background px-6 py-4">
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h1 className="text-[20px] font-semibold tracking-tight">Email Support</h1>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">Client email conversations and support requests</p>
+    <div className={`flex h-full min-h-0 flex-col ${embedded ? '' : 'bg-muted/30'}`}>
+      <div className={`border-b bg-background flex-shrink-0 ${embedded ? 'px-6 py-4' : 'px-6 py-4'}`}>
+        {!embedded && (
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h1 className="text-[20px] font-semibold tracking-tight">Email Support</h1>
+              <p className="mt-0.5 text-[13px] text-muted-foreground">Client email conversations and support requests</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="gap-1.5 text-[13px]">
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh
+              </Button>
+              <Button
+                onClick={() => navigate('/email-support/new')}
+                size="sm"
+                className="gap-1.5 text-[13px]"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Compose
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5 text-[13px]">
-              <RefreshCw className="w-3.5 h-3.5" />
-              Refresh
-            </Button>
-            <Button
-              onClick={() => navigate('/email-support/new')}
-              size="sm"
-              className="gap-1.5 text-[13px]"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Compose
-            </Button>
-          </div>
-        </div>
+        )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-4 gap-3 mb-4">
-          {stats.map((s) => (
-            <Card key={s.label} className="gap-0 px-4 py-3">
-              <CardContent className="flex items-center gap-3 p-0">
-              <div className="flex size-8 items-center justify-center rounded-md bg-muted">
-                <s.icon className="w-4 h-4" style={{ color: s.color }} />
-              </div>
-              <div>
-                <div className="text-[18px] font-semibold">{s.value}</div>
-                <div className="text-[11px] text-muted-foreground">{s.label}</div>
-              </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Filters */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search emails..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="h-8 bg-muted pl-9 pr-3 text-[13px]"
-            />
-          </div>
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger className="h-8 w-[150px] text-[13px]">
-              <SelectValue placeholder="All Priorities" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Priorities</SelectItem>
-              <SelectItem value="Critical">Critical</SelectItem>
-              <SelectItem value="High">High</SelectItem>
-              <SelectItem value="Medium">Medium</SelectItem>
-              <SelectItem value="Low">Low</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex flex-wrap items-center gap-1">
+          {folderOptions.map((f) => {
+            const isActive = folder === f;
+            return (
+              <Button
+                key={f}
+                variant={isActive ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setFolder(f)}
+                className="gap-1.5 text-[12px]"
+              >
+                <div
+                  className="h-1.5 w-1.5 rounded-full"
+                  style={{ backgroundColor: isActive ? 'white' : folderColors[f] }}
+                />
+                {f}
+                <span className="ml-0.5 font-semibold">{folderCounts[f]}</span>
+              </Button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden flex">
-        {/* Folder Sidebar */}
-        <div className="flex w-[180px] shrink-0 flex-col gap-0.5 border-r bg-background px-2 py-3">
-          <div className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Folders</div>
-          {(Object.keys(folderCounts) as Array<keyof typeof folderCounts>).map((f) => (
-            <Button
-              key={f}
-              onClick={() => setFolder(f)}
-              variant={folder === f ? 'secondary' : 'ghost'}
-              className="h-auto justify-between px-2 py-2 text-[13px] font-medium"
-            >
-              <div className="flex items-center gap-2">
-                {f === 'All' && <Inbox className="w-3.5 h-3.5" />}
-                {f === 'Open' && <AlertCircle className="w-3.5 h-3.5" />}
-                {f === 'Pending' && <Clock className="w-3.5 h-3.5" />}
-                {f === 'Closed' && <CheckCircle2 className="w-3.5 h-3.5" />}
-                {f === 'Starred' && <Star className="w-3.5 h-3.5" />}
-                {f}
-              </div>
-              <span className={`rounded-full px-1.5 py-0.5 text-[11px] ${folder === f ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                {folderCounts[f]}
-              </span>
-            </Button>
-          ))}
-
-          <div className="mt-4 border-t pt-3">
-            <div className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tags</div>
-            {['Network', 'Access', 'Infrastructure', 'CSAT', 'Critical'].map((tag) => (
-              <Button
-                key={tag}
-                variant="ghost"
-                className="h-auto w-full justify-start gap-2 px-2 py-1.5 text-[12px]"
-              >
-                <Tag className="w-3 h-3" />
-                {tag}
-              </Button>
-            ))}
-          </div>
+      <div className="flex shrink-0 items-center gap-3 border-b bg-background px-6 py-3">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search emails..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="h-8 bg-muted pl-9 pr-3 text-[13px]"
+          />
         </div>
+        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+          <SelectTrigger className="h-8 w-[150px] text-[13px]">
+            <SelectValue placeholder="All Priorities" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Priorities</SelectItem>
+            <SelectItem value="Critical">Critical</SelectItem>
+            <SelectItem value="High">High</SelectItem>
+            <SelectItem value="Medium">Medium</SelectItem>
+            <SelectItem value="Low">Low</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
+      <div className="flex-1 overflow-y-auto">
         {/* Email List */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="h-full overflow-y-auto">
           {/* Toolbar */}
           <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background px-4 py-2">
             <Checkbox />
@@ -393,9 +357,6 @@ export function EmailSupport() {
                       <Badge variant="outline" className={`text-[11px] ${pc.badgeClass}`}>
                         {email.priority}
                       </Badge>
-                      <span className="rounded border bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
-                        {email.tag}
-                      </span>
                       {email.attachments > 0 && (
                         <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                           <Paperclip className="w-3 h-3" />
@@ -434,4 +395,8 @@ export function EmailSupport() {
       </div>
     </div>
   );
+}
+
+export function EmailSupport() {
+  return <EmailSupportPanel />;
 }

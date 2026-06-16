@@ -1,5 +1,6 @@
 import React from "react";
 import { toast } from "sonner";
+import { buildClientFromPM, getPMCompany, seedServiceDeskClients, type ServiceDeskClient } from "../lib/clientsData";
 import { seedClientArticles, seedEmailThreads, seedEngineers, seedNotifications, seedSLAs, seedTickets } from "./seed";
 import type {
   Attachment,
@@ -25,6 +26,7 @@ type State = {
   ticketArticles: Record<string, TicketArticle>;
   clientArticles: ClientArticle[];
   slas: SLA[];
+  clients: ServiceDeskClient[];
 };
 
 type Actions = {
@@ -106,6 +108,7 @@ type Actions = {
     status: ClientArticleStatus;
   }): void;
   incrementClientArticleViews(id: string): void;
+  addClientFromPM(pmCompanyId: string): string | null;
 };
 
 type Store = State & Actions;
@@ -165,6 +168,7 @@ function loadInitialState(): State {
       ticketArticles: parsed.ticketArticles ?? {},
       clientArticles: (parsed as State).clientArticles ?? seedClientArticles,
       slas: (parsed as State).slas ?? seedSLAs,
+      clients: (parsed as State).clients ?? seedServiceDeskClients,
     };
   } catch {
     const seedTicketArticles: Record<string, TicketArticle> = Object.fromEntries(
@@ -189,6 +193,7 @@ function loadInitialState(): State {
       ticketArticles: seedTicketArticles,
       clientArticles: seedClientArticles,
       slas: seedSLAs,
+      clients: seedServiceDeskClients,
     };
   }
 }
@@ -841,6 +846,29 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
             a.id === id ? { ...a, views: a.views + 1 } : a,
           ),
         }));
+      },
+
+      addClientFromPM: (pmCompanyId) => {
+        const pm = getPMCompany(pmCompanyId);
+        if (!pm) {
+          toast.error("Company not found in PM");
+          return null;
+        }
+        let createdId: string | null = null;
+        setAndPersist((prev) => {
+          if (prev.clients.some((c) => c.pmCompanyId === pmCompanyId || c.company === pm.name)) {
+            return prev;
+          }
+          const client = buildClientFromPM(pm);
+          createdId = client.id;
+          return { ...prev, clients: [client, ...prev.clients] };
+        });
+        if (createdId) {
+          toast.success(`${pm.name} added from PM`);
+          return createdId;
+        }
+        toast.error(`${pm.name} is already in Service Desk`);
+        return null;
       },
     }),
     [notify, setAndPersist],

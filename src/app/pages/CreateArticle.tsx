@@ -1,13 +1,18 @@
-import React, { useState, useRef, type ReactNode } from 'react';
-import { useNavigate } from 'react-router';
+import React, { useState, useRef, useEffect, type ReactNode } from 'react';
+import { useNavigate, useParams, Link } from 'react-router';
 import { toast } from 'sonner';
 import {
   Plus, FileText, Folder, PenLine, Bold, Italic, Underline,
   Strikethrough, Undo2, Redo2, AlignLeft, AlignCenter, AlignRight,
-  List, ListOrdered, Link, Image, Quote, Code, ChevronDown,
-  Type, Highlighter, Palette, MoreHorizontal, X
+  List, ListOrdered, Link as LinkIcon, ChevronDown,
+  Type, Highlighter, MoreHorizontal, X, Ticket, Building2, User, Clock,
+  ExternalLink, AlertCircle, ArrowLeft,
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
+import { Badge } from '../components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
+import { useServiceDesk } from '../store/serviceDeskStore';
+import { getTicketSupportType, supportTypeBadgeClass } from '../lib/ticketSupportType';
 
 const existingCategories = [
   'Uncategorized',
@@ -22,9 +27,33 @@ type BlockType = 'Paragraph' | 'Heading 1' | 'Heading 2' | 'Heading 3' | 'Quote'
 
 const blockTypes: BlockType[] = ['Paragraph', 'Heading 1', 'Heading 2', 'Heading 3', 'Quote', 'Code'];
 
+const statusColors: Record<string, { className: string; dotClass: string }> = {
+  Open: { className: 'bg-blue-50 text-blue-700 border-blue-200', dotClass: 'bg-blue-500' },
+  'In Progress': { className: 'bg-amber-50 text-amber-700 border-amber-200', dotClass: 'bg-amber-500' },
+  Escalated: { className: 'bg-red-50 text-red-700 border-red-200', dotClass: 'bg-red-500' },
+  Resolved: { className: 'bg-emerald-50 text-emerald-700 border-emerald-200', dotClass: 'bg-emerald-500' },
+  Closed: { className: 'bg-gray-50 text-gray-600 border-gray-200', dotClass: 'bg-gray-400' },
+};
+
 export function CreateArticle() {
   const navigate = useNavigate();
+  const { ticketId: rawTicketId } = useParams<{ ticketId: string }>();
+  const ticketId = (rawTicketId ?? '').replace('#', '');
+  const {
+    tickets,
+    ticketArticles,
+    getOrCreateTicketArticle,
+    updateTicketArticle,
+    slas,
+  } = useServiceDesk();
+  const ticket = tickets.find((t) => t.id === ticketId);
+  const article = ticketId
+    ? (ticketArticles[ticketId] ?? getOrCreateTicketArticle({ ticketId }))
+    : null;
+  const supportType = ticket ? getTicketSupportType(slas, ticket.project) : null;
+
   const editorRef = useRef<HTMLDivElement>(null);
+  const initializedRef = useRef(false);
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Uncategorized');
   const [showBlockMenu, setShowBlockMenu] = useState(false);
@@ -33,6 +62,22 @@ export function CreateArticle() {
   const [categories, setCategories] = useState(existingCategories);
   const [activeBlock, setActiveBlock] = useState<BlockType>('Paragraph');
   const [wordCount, setWordCount] = useState(0);
+
+  useEffect(() => {
+    if (initializedRef.current || !article) return;
+    initializedRef.current = true;
+    setTitle(article.title);
+    const projectCategory = article.project || 'Uncategorized';
+    setCategories((prev) =>
+      prev.includes(projectCategory) ? prev : [...prev, projectCategory],
+    );
+    setCategory(projectCategory);
+    if (editorRef.current && article.content) {
+      editorRef.current.innerHTML = article.content;
+      const text = editorRef.current.innerText || '';
+      setWordCount(text.trim() ? text.trim().split(/\s+/).length : 0);
+    }
+  }, [article]);
 
   const execCmd = (cmd: string, value?: string) => {
     editorRef.current?.focus();
@@ -52,6 +97,37 @@ export function CreateArticle() {
     setNewCategory('');
     setShowAddCategory(false);
   };
+
+  const handlePublish = () => {
+    if (!ticketId || !title.trim()) return;
+    const content = editorRef.current?.innerHTML ?? '';
+    updateTicketArticle({
+      ticketId,
+      title: title.trim(),
+      content,
+      status: 'Published',
+    });
+    toast.success('Article published');
+    navigate(`/knowledge/ticket/${ticketId}`);
+  };
+
+  const handleBack = () => {
+    if (ticket) {
+      navigate(`/tickets/${ticket.id}`);
+      return;
+    }
+    navigate('/knowledge');
+  };
+
+  const handleCancel = () => {
+    if (ticket) {
+      navigate(`/knowledge/project/${encodeURIComponent(ticket.project)}`);
+      return;
+    }
+    navigate('/knowledge');
+  };
+
+  const sc = ticket ? statusColors[ticket.status] : null;
 
   const ToolbarBtn = ({
     onClick, children, tip, active
@@ -78,15 +154,25 @@ export function CreateArticle() {
 
   return (
     <div className="min-h-full bg-[#f8f9fa] flex flex-col">
-      {/* Dark Header */}
-      <div className="bg-primary-hover px-6 py-5 flex-shrink-0">
-        <div className="max-w-3xl mx-auto flex items-start gap-4">
-          <div className="w-9 h-9 rounded-md bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <Plus className="w-4 h-4 text-white" />
-          </div>
+      {/* Header */}
+      <div className="bg-sidebar border-sidebar-border flex-shrink-0 border-b px-6 py-5">
+        <div className="mx-auto flex max-w-3xl items-center gap-3">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="flex size-8 flex-shrink-0 items-center justify-center rounded-md border border-violet-400/25 bg-white text-[#6c757d] transition-colors hover:text-[#0b2235]"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
           <div>
-            <h1 className="text-[20px] font-semibold text-white tracking-tight">Create New Article</h1>
-            <p className="text-[13px] text-white/50 mt-0.5">Fill in the details to publish a new article</p>
+            <h1 className="text-sidebar-foreground text-[20px] font-semibold tracking-tight">
+              {ticket ? `Create Article from Ticket #${ticket.id}` : 'Create New Article'}
+            </h1>
+            <p className="text-sidebar-muted-foreground mt-0.5 text-[13px]">
+              {ticket
+                ? 'Document the resolution and publish to the knowledge base'
+                : 'Fill in the details to publish a new article'}
+            </p>
           </div>
         </div>
       </div>
@@ -94,6 +180,95 @@ export function CreateArticle() {
       {/* Form */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-6 py-6 space-y-5">
+
+          {!ticket && ticketId ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Ticket not found</AlertTitle>
+              <AlertDescription>
+                Ticket <span className="font-semibold">#{ticketId}</span> does not exist.{' '}
+                <button
+                  type="button"
+                  className="font-medium underline hover:no-underline"
+                  onClick={() => navigate('/knowledge')}
+                >
+                  Go back to Knowledge Base
+                </button>
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {ticket && sc ? (
+            <div className="bg-white border border-[#e1e4e8] rounded-lg p-5">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <label className="flex items-center gap-2 text-[12px] font-semibold text-[#4b5563]">
+                  <Ticket className="w-3.5 h-3.5 text-[#9ca3af]" />
+                  Linked Ticket
+                </label>
+                <Link
+                  to={`/tickets/${ticket.id}`}
+                  className="inline-flex items-center gap-1 text-[12px] font-medium text-primary hover:text-primary-hover transition-colors"
+                >
+                  View ticket
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+              </div>
+
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <span className="rounded bg-[#f1f3f5] px-1.5 py-0.5 font-mono text-[11px] text-[#6c757d]">
+                  #{ticket.id}
+                </span>
+                <Badge variant="outline" className={`gap-1.5 text-[11px] ${sc.className}`}>
+                  <span className={`size-1.5 rounded-full ${sc.dotClass}`} />
+                  {ticket.status}
+                </Badge>
+                {ticket.priority ? (
+                  <Badge variant="outline" className="text-[11px]">
+                    {ticket.priority}
+                  </Badge>
+                ) : null}
+                {supportType ? (
+                  <Badge variant="outline" className={`text-[11px] ${supportTypeBadgeClass[supportType] ?? ''}`}>
+                    {supportType}
+                  </Badge>
+                ) : null}
+              </div>
+
+              <h2 className="text-[15px] font-semibold text-[#1a1d21] leading-snug mb-3">
+                {ticket.subject}
+              </h2>
+
+              <div className="grid gap-2 sm:grid-cols-2 mb-4">
+                <div className="flex items-center gap-2 text-[12px] text-[#6c757d]">
+                  <Building2 className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{ticket.project}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[12px] text-[#6c757d]">
+                  <User className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{ticket.contactName}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[12px] text-[#6c757d]">
+                  <Clock className="w-3.5 h-3.5 shrink-0" />
+                  <span>Created {new Date(ticket.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[12px] text-[#6c757d]">
+                  <Clock className="w-3.5 h-3.5 shrink-0" />
+                  <span>Updated {new Date(ticket.updatedAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+
+              {ticket.description ? (
+                <div className="rounded-md border border-[#f1f3f5] bg-[#fafafa] px-3 py-2.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9ca3af] mb-1">
+                    Description
+                  </p>
+                  <p className="text-[13px] text-[#4b5563] leading-relaxed line-clamp-4 whitespace-pre-wrap">
+                    {ticket.description}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           {/* Article Title */}
           <div className="bg-white border border-[#e1e4e8] rounded-lg p-5">
@@ -286,7 +461,7 @@ export function CreateArticle() {
                 }}
                 tip="Insert link"
               >
-                <Link className="w-3.5 h-3.5" />
+                <LinkIcon className="w-3.5 h-3.5" />
               </ToolbarBtn>
 
               <DropdownMenu>
@@ -336,15 +511,15 @@ export function CreateArticle() {
           {/* Actions */}
           <div className="flex items-center justify-end gap-3 pb-4">
             <button
-              onClick={() => navigate('/knowledge')}
+              onClick={handleCancel}
               className="h-9 px-5 text-[13px] font-medium text-[#4b5563] border border-[#e1e4e8] rounded-md bg-white hover:border-[#0b2235] hover:text-[#0b2235] transition-colors"
             >
               Cancel
             </button>
             <button
-              onClick={() => navigate('/knowledge')}
+              onClick={handlePublish}
               className="h-9 px-5 text-[13px] font-medium text-white bg-[#0b2235] rounded-md hover:bg-[#0f2d45] transition-colors disabled:opacity-50"
-              disabled={!title.trim()}
+              disabled={!title.trim() || !ticketId}
             >
               Publish Article
             </button>

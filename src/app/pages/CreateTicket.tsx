@@ -57,21 +57,24 @@ export function CreateTicket() {
   const selectedFieldEngineer = engineers.find((engineer) => engineer.id === form.fieldEngineerId);
 
   return (
-    <div className="min-h-full bg-[#f8f9fa] p-6">
-      <div className="mx-auto w-full max-w-6xl">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
+    <div className="min-h-full bg-[#f8f9fa] flex flex-col">
+      <div className="bg-sidebar border-sidebar-border flex-shrink-0 border-b px-6 py-5">
+        <div className="mx-auto flex w-full max-w-6xl items-center gap-3">
           <button
             onClick={() => navigate('/tickets')}
-            className="w-8 h-8 flex items-center justify-center text-[#6c757d] hover:text-[#0b2235] hover:bg-white border border-[#e1e4e8] rounded-md transition-colors"
+            className="flex size-8 items-center justify-center rounded-md border border-violet-400/25 bg-white text-[#6c757d] transition-colors hover:text-[#0b2235]"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <h1 className="text-[20px] font-semibold text-[#0b2235]">Create Ticket</h1>
-            <p className="text-[13px] text-[#6c757d]">Capture a new support request</p>
+            <h1 className="text-sidebar-foreground text-[20px] font-semibold">Create Ticket</h1>
+            <p className="text-sidebar-muted-foreground text-[13px]">Capture a new support request</p>
           </div>
         </div>
+      </div>
+
+      <div className="flex-1 p-6">
+      <div className="mx-auto w-full max-w-6xl">
 
         {/* Progress Steps */}
         <div className="mb-6 flex items-center gap-2">
@@ -388,6 +391,7 @@ export function CreateTicket() {
             </button>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
