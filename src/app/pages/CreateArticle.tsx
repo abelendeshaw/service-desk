@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, type ReactNode } from 'react';
-import { useNavigate, useParams, Link } from 'react-router';
+import { useNavigate, useParams, Link, useLocation } from 'react-router';
 import { toast } from 'sonner';
 import {
   Plus, FileText, Folder, PenLine, Bold, Italic, Underline,
@@ -13,6 +13,7 @@ import { Badge } from '../components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { useServiceDesk } from '../store/serviceDeskStore';
 import { getTicketSupportType, supportTypeBadgeClass } from '../lib/ticketSupportType';
+import { getKnowledgeBasePaths } from '../lib/portalPaths';
 
 const existingCategories = [
   'Uncategorized',
@@ -37,6 +38,8 @@ const statusColors: Record<string, { className: string; dotClass: string }> = {
 
 export function CreateArticle() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const paths = getKnowledgeBasePaths(location.pathname);
   const { ticketId: rawTicketId } = useParams<{ ticketId: string }>();
   const ticketId = (rawTicketId ?? '').replace('#', '');
   const {
@@ -108,23 +111,23 @@ export function CreateArticle() {
       status: 'Published',
     });
     toast.success('Article published');
-    navigate(`/knowledge/ticket/${ticketId}`);
+    navigate(paths.ticketView(ticketId));
   };
 
   const handleBack = () => {
     if (ticket) {
-      navigate(`/tickets/${ticket.id}`);
+      navigate(paths.ticketView(ticket.id));
       return;
     }
-    navigate('/knowledge');
+    navigate(paths.ticketsRoot);
   };
 
   const handleCancel = () => {
     if (ticket) {
-      navigate(`/knowledge/project/${encodeURIComponent(ticket.project)}`);
+      navigate(paths.ticketView(ticket.id));
       return;
     }
-    navigate('/knowledge');
+    navigate(paths.ticketsRoot);
   };
 
   const sc = ticket ? statusColors[ticket.status] : null;
@@ -190,9 +193,9 @@ export function CreateArticle() {
                 <button
                   type="button"
                   className="font-medium underline hover:no-underline"
-                  onClick={() => navigate('/knowledge')}
+                  onClick={() => navigate(paths.ticketsRoot)}
                 >
-                  Go back to Knowledge Base
+                  Go back to tickets
                 </button>
               </AlertDescription>
             </Alert>
@@ -206,7 +209,7 @@ export function CreateArticle() {
                   Linked Ticket
                 </label>
                 <Link
-                  to={`/tickets/${ticket.id}`}
+                  to={paths.ticketView(ticket.id)}
                   className="inline-flex items-center gap-1 text-[12px] font-medium text-primary hover:text-primary-hover transition-colors"
                 >
                   View ticket
@@ -518,7 +521,7 @@ export function CreateArticle() {
             </button>
             <button
               onClick={handlePublish}
-              className="h-9 px-5 text-[13px] font-medium text-white bg-[#0b2235] rounded-md hover:bg-[#0f2d45] transition-colors disabled:opacity-50"
+              className="h-9 px-5 text-[13px] font-medium text-primary-foreground bg-primary rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
               disabled={!title.trim() || !ticketId}
             >
               Publish Article

@@ -15,6 +15,7 @@ import {
   Zap,
   BarChart3,
   MonitorSmartphone,
+  Wrench,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
@@ -70,6 +71,7 @@ export function Login() {
 
   React.useEffect(() => {
     if (user?.role === 'client') navigate('/client', { replace: true });
+    else if (user?.role === 'engineer') navigate('/engineer', { replace: true });
     else if (user?.role === 'staff') navigate('/', { replace: true });
   }, [user, navigate]);
 
@@ -95,7 +97,7 @@ export function Login() {
           properties: { displayName, email },
         });
       }
-      navigate(portal === 'client' ? '/client' : '/');
+      navigate(portal === 'client' ? '/client' : portal === 'engineer' ? '/engineer' : '/');
     }, 600);
   };
 
@@ -186,30 +188,44 @@ export function Login() {
             <div className="mb-8">
               <h2 className="text-primary text-[22px] font-semibold tracking-tight">Welcome back</h2>
               <p className="text-muted-foreground mt-1.5 text-[13px]">
-                {portal === 'client' ? 'Sign in to your client portal' : 'Sign in to your Service Desk workspace'}
+                {portal === 'client'
+                  ? 'Sign in to your client portal'
+                  : portal === 'engineer'
+                    ? 'Sign in to your field engineer portal'
+                    : 'Sign in to your Service Desk workspace'}
               </p>
             </div>
 
-            <div className="mb-5 flex gap-1 rounded-lg border bg-muted p-1">
+            <div className="mb-5 grid grid-cols-3 gap-1 rounded-lg border bg-muted p-1">
               <button
                 type="button"
                 onClick={() => { setPortal('staff'); setEmail(''); setError(''); }}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[12px] font-medium transition-colors ${
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[11px] font-medium transition-colors ${
                   portal === 'staff' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <Ticket className="w-3.5 h-3.5" />
-                Staff Workspace
+                Staff
               </button>
               <button
                 type="button"
                 onClick={() => { setPortal('client'); setEmail('alemu@epss.com'); setError(''); }}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[12px] font-medium transition-colors ${
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[11px] font-medium transition-colors ${
                   portal === 'client' ? 'bg-background text-violet-700 shadow-sm' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <MonitorSmartphone className="w-3.5 h-3.5" />
-                Client Portal
+                Client
+              </button>
+              <button
+                type="button"
+                onClick={() => { setPortal('engineer'); setEmail('wongel@ienetworks.co'); setError(''); }}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[11px] font-medium transition-colors ${
+                  portal === 'engineer' ? 'bg-background text-violet-700 shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Wrench className="w-3.5 h-3.5" />
+                Engineer
               </button>
             </div>
 
@@ -319,6 +335,8 @@ export function Login() {
             <p className="text-[12px] text-[#9ca3af]">
               {portal === 'client' ? (
                 <>Demo: <span className="font-medium text-foreground">alemu@epss.com</span> · any password</>
+              ) : portal === 'engineer' ? (
+                <>Demo: <span className="font-medium text-foreground">wongel@ienetworks.co</span> · any password</>
               ) : (
                 <>Demo: <span className="font-medium text-foreground">abreham.t@ienetworks.co</span> · any password</>
               )}

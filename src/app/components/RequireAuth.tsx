@@ -9,7 +9,9 @@ export function RequireStaff({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!user) navigate("/login", { replace: true, state: { portal: "staff" } });
-    else if (user.role !== "staff") navigate("/client", { replace: true });
+    else if (user.role !== "staff") {
+      navigate(user.role === "engineer" ? "/engineer" : "/client", { replace: true });
+    }
   }, [user, navigate]);
 
   if (!user || user.role !== "staff") return null;

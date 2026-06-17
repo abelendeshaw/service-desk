@@ -1,5 +1,6 @@
 import React from "react";
 import type { AuthUser, UserRole } from "./types";
+import { seedEngineers } from "./seed";
 
 const AUTH_STORAGE_KEY = "serviceDesk.auth.v1";
 
@@ -32,6 +33,16 @@ const DEMO_USERS: AuthUser[] = [
     company: "MinT",
     phone: "+251 922 345 678",
     jobTitle: "Infrastructure Lead",
+  },
+  {
+    id: "eng-ww",
+    name: "Wongel Wondyifraw",
+    email: "wongel@ienetworks.co",
+    initials: "WW",
+    role: "engineer",
+    company: "IE Networks",
+    jobTitle: "Field Engineer",
+    engineerId: "eng-ww",
   },
 ];
 
@@ -114,6 +125,40 @@ function resolveUser(email: string, portal: UserRole): AuthUser | null {
     };
   }
 
+  if (portal === "engineer") {
+    const engineer = seedEngineers.find((e) => e.email.toLowerCase() === normalized);
+    if (engineer) {
+      return {
+        id: engineer.id,
+        engineerId: engineer.id,
+        name: engineer.name,
+        email: engineer.email,
+        initials: engineer.initials,
+        role: "engineer",
+        company: "IE Networks",
+        jobTitle: "Field Engineer",
+      };
+    }
+    if (normalized.endsWith("@ienetworks.co")) {
+      const name = normalized
+        .split("@")[0]
+        .replace(/[._-]/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+      const parts = name.trim().split(/\s+/);
+      return {
+        id: `engineer-${normalized}`,
+        engineerId: `engineer-${normalized}`,
+        name,
+        email: normalized,
+        initials: ((parts[0]?.[0] ?? "F") + (parts[1]?.[0] ?? "E")).toUpperCase(),
+        role: "engineer",
+        company: "IE Networks",
+        jobTitle: "Field Engineer",
+      };
+    }
+    return null;
+  }
+
   return null;
 }
 
@@ -128,7 +173,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         message:
           portal === "client"
             ? "Client account not found. Try alemu@epss.com or your organization email."
-            : "Staff account not found. Use your @ienetworks.co email.",
+            : portal === "engineer"
+              ? "Field engineer account not found. Try wongel@ienetworks.co or your @ienetworks.co email."
+              : "Staff account not found. Use your @ienetworks.co email.",
       };
     }
     setUser(resolved);

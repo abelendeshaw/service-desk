@@ -6,7 +6,7 @@ import {
 import {
   Ticket, CheckCircle2, Clock, AlertTriangle, TrendingUp,
   TrendingDown, ChevronRight, Wrench, Activity, Flame,
-  CalendarClock, RefreshCw,
+  CalendarClock,
 } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -20,12 +20,9 @@ import { Progress } from '../components/ui/progress';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../components/ui/table';
+import { filterTicketsForEngineer } from '../lib/engineerTickets';
+import { useAuth } from '../store/authStore';
 import { useServiceDesk } from '../store/serviceDeskStore';
-
-const ENGINEER_ID = 'eng-ww';
-const ENGINEER_NAME = 'Wongel Wondyifraw';
-const ENGINEER_INITIALS = 'WW';
-const ENGINEER_EMAIL = 'wongel@ienetworks.co';
 
 const statusConfig: Record<string, { dot: string; bg: string; text: string }> = {
   Open:          { dot: '#2563eb', bg: '#eff6ff', text: '#1d4ed8' },
@@ -82,11 +79,12 @@ function isOverdue(iso: string | null) {
 
 export function EngineerDashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { tickets, notifications } = useServiceDesk();
 
   const myTickets = useMemo(
-    () => tickets.filter((t) => t.assignedEngineerIds?.includes(ENGINEER_ID) || t.assignedEngineerId === ENGINEER_ID),
-    [tickets],
+    () => filterTicketsForEngineer(tickets, user?.engineerId),
+    [tickets, user?.engineerId],
   );
 
   const active    = myTickets.filter((t) => t.status === 'Open' || t.status === 'In Progress');
@@ -161,24 +159,20 @@ export function EngineerDashboard() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-[13px] font-semibold text-primary-foreground">
-            {ENGINEER_INITIALS}
+            {user?.initials ?? "FE"}
           </div>
           <div>
             <h1 className="text-[20px] font-semibold tracking-tight">Field Engineer Workspace</h1>
             <p className="mt-0.5 text-[13px] text-muted-foreground">
-              {ENGINEER_NAME} · {ENGINEER_EMAIL} ·{' '}
+              {user?.name ?? "Field Engineer"} · {user?.email ?? ""} ·{' '}
               {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5 text-[13px]">
-            <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
-          </Button>
-          <Button onClick={() => navigate('/tickets')} size="sm" className="gap-1.5 text-[13px]">
+          <Button onClick={() => navigate('/engineer/tickets')} size="sm" className="gap-1.5 text-[13px]">
             <Ticket className="h-3.5 w-3.5" />
-            All Tickets
+            My Tickets
           </Button>
         </div>
       </div>
@@ -219,7 +213,7 @@ export function EngineerDashboard() {
               </CardDescription>
             </div>
             <Button
-              onClick={() => navigate('/tickets')}
+              onClick={() => navigate('/engineer/tickets')}
               variant="ghost"
               size="sm"
               className="gap-1 text-[12px]"
@@ -257,7 +251,7 @@ export function EngineerDashboard() {
                     return (
                       <TableRow
                         key={t.id}
-                        onClick={() => navigate(`/tickets/${t.id}`)}
+                        onClick={() => navigate(`/engineer/tickets/${t.id}`)}
                         className="cursor-pointer"
                       >
                         <TableCell className="px-5 py-3">
@@ -390,7 +384,12 @@ export function EngineerDashboard() {
                     return (
                       <div
                         key={n.id}
-                        onClick={() => n.href && navigate(n.href)}
+                        onClick={() => {
+                          const href = n.href?.startsWith('/tickets/')
+                            ? n.href.replace('/tickets/', '/engineer/tickets/')
+                            : n.href;
+                          if (href) navigate(href);
+                        }}
                         className={`flex items-start gap-3 px-5 py-3 transition-colors hover:bg-muted/50 ${n.href ? 'cursor-pointer' : ''}`}
                       >
                         <div
@@ -467,7 +466,7 @@ export function EngineerDashboard() {
                 {escalated.slice(0, 4).map((t) => (
                   <div
                     key={t.id}
-                    onClick={() => navigate(`/tickets/${t.id}`)}
+                    onClick={() => navigate(`/engineer/tickets/${t.id}`)}
                     className="cursor-pointer px-5 py-3 transition-colors hover:bg-muted/50"
                   >
                     <div className="flex items-start justify-between gap-2">

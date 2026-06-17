@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import {
   Ticket, CheckCircle2, Clock, AlertTriangle, TrendingUp,
-  TrendingDown, ChevronRight, Activity, Zap, RefreshCw,
+  TrendingDown, ChevronRight, Activity, Zap,
   MonitorSmartphone, Wrench,
 } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
@@ -185,10 +185,6 @@ export function Dashboard() {
           <p className="mt-0.5 text-[13px] text-muted-foreground">Service Desk Overview · Updated {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5 text-[13px]">
-            <RefreshCw className="w-3.5 h-3.5" />
-            Refresh
-          </Button>
           <Button
             onClick={() => navigate('/tickets/new')}
             size="sm"
@@ -235,7 +231,7 @@ export function Dashboard() {
         </Card>
         <Card
           className="cursor-pointer transition-all hover:shadow-md"
-          onClick={() => navigate('/engineer-dashboard')}
+          onClick={() => navigate('/login', { state: { portal: 'engineer' } })}
         >
           <CardContent className="flex items-center gap-4 p-4">
             <div className="flex size-10 items-center justify-center rounded-lg bg-blue-50">

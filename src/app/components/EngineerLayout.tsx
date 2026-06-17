@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Outlet, NavLink, useNavigate } from "react-router";
+import { Outlet, NavLink, useNavigate, useLocation } from "react-router";
 import { toast } from "sonner";
 import {
   LayoutDashboard,
@@ -14,7 +14,7 @@ import {
   HelpCircle,
   CheckCheck,
   X,
-  MonitorSmartphone,
+  Wrench,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -52,23 +52,39 @@ function relativeTime(iso: string): string {
 }
 
 const navItems = [
-  { name: "Dashboard", href: "/client", icon: LayoutDashboard, end: true },
-  { name: "My Tickets", href: "/client/tickets", icon: Ticket, end: false },
-  { name: "Knowledge Base", href: "/client/knowledge", icon: BookOpen, end: false },
+  { name: "Dashboard", href: "/engineer", icon: LayoutDashboard, end: true },
+  { name: "My Tickets", href: "/engineer/tickets", icon: Ticket, end: false },
+  { name: "Knowledge Base", href: "/engineer/knowledge", icon: BookOpen, end: false },
 ];
 
-export function ClientLayout() {
+function isEngineerNavItemActive(href: string, pathname: string, end?: boolean) {
+  const isCreateArticle = pathname.startsWith("/engineer/knowledge/edit/");
+
+  if (href === "/engineer/knowledge") {
+    return pathname.startsWith("/engineer/knowledge") && !isCreateArticle;
+  }
+  if (href === "/engineer/tickets") {
+    return pathname.startsWith("/engineer/tickets") || isCreateArticle;
+  }
+  if (end) {
+    return pathname === href;
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export function EngineerLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
   const { notifications, markNotificationsRead, markNotificationRead, dismissNotification } = useServiceDesk();
 
   useEffect(() => {
-    if (!user) navigate("/login", { replace: true, state: { portal: "client" } });
-    else if (user.role !== "client") navigate(user.role === "engineer" ? "/engineer" : "/", { replace: true });
+    if (!user) navigate("/login", { replace: true, state: { portal: "engineer" } });
+    else if (user.role !== "engineer") navigate(user.role === "client" ? "/client" : "/", { replace: true });
   }, [user, navigate]);
 
   useEffect(() => {
@@ -81,18 +97,24 @@ export function ClientLayout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [notifOpen]);
 
-  if (!user || user.role !== "client") return null;
+  if (!user || user.role !== "engineer") return null;
 
-  const clientNotifications = notifications.filter(
-    (n) => n.href?.includes("/tickets/") || n.kind === "status" || n.kind === "system",
+  const engineerNotifications = notifications.filter(
+    (n) => n.href?.includes("/tickets/") || n.kind === "assignment" || n.kind === "status" || n.kind === "escalation",
   );
-  const unreadCount = clientNotifications.filter((n) => n.unread).length;
+  const unreadCount = engineerNotifications.filter((n) => n.unread).length;
+
+  const mapNotificationHref = (href: string) => {
+    if (href.startsWith("/tickets/")) return href.replace("/tickets/", "/engineer/tickets/");
+    if (href.startsWith("/knowledge/")) return href.replace("/knowledge/", "/engineer/knowledge/");
+    return href;
+  };
 
   const confirmLogout = () => {
     setLogoutOpen(false);
     logout();
-    toast.success("Signed out of client portal");
-    navigate("/login", { state: { portal: "client" } });
+    toast.success("Signed out of field engineer portal");
+    navigate("/login", { state: { portal: "engineer" } });
   };
 
   return (
@@ -105,15 +127,15 @@ export function ClientLayout() {
         >
           {sidebarCollapsed ? (
             <div className="bg-violet-500 text-white flex size-7 items-center justify-center rounded-md flex-shrink-0">
-              <MonitorSmartphone className="w-4 h-4" />
+              <Wrench className="w-4 h-4" />
             </div>
           ) : (
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="bg-violet-500 text-white flex size-7 items-center justify-center rounded-md flex-shrink-0">
-                <MonitorSmartphone className="w-4 h-4" />
+                <Wrench className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-sidebar-foreground text-sm font-semibold leading-tight truncate">Client Portal</div>
+                <div className="text-sidebar-foreground text-sm font-semibold leading-tight truncate">Field Engineer</div>
                 <div className="text-sidebar-foreground/60 text-xs leading-tight truncate">{user.company}</div>
               </div>
             </div>
@@ -132,39 +154,38 @@ export function ClientLayout() {
           {!sidebarCollapsed && (
             <div className="mb-2 px-2">
               <Badge variant="secondary" className="bg-violet-500/15 text-violet-700 border-violet-400/25 text-[10px]">
-                Client Workspace
+                Engineer Workspace
               </Badge>
             </div>
           )}
-          {navItems.map((item) => (
+          {navItems.map((item) => {
+            const active = isEngineerNavItemActive(item.href, location.pathname, item.end);
+            return (
             <NavLink
               key={item.name}
               to={item.href}
               end={item.end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-2 py-2 rounded-md transition-all duration-100 group relative ${
-                  isActive
-                    ? "bg-white text-violet-700 dark:bg-sidebar-muted dark:text-sidebar-foreground"
-                    : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
-                } ${sidebarCollapsed ? "justify-center" : ""}`
-              }
+              className={`flex items-center gap-3 px-2 py-2 rounded-md transition-all duration-100 group relative ${
+                active
+                  ? "bg-white text-violet-700 dark:bg-sidebar-muted dark:text-sidebar-foreground"
+                  : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+              } ${sidebarCollapsed ? "justify-center" : ""}`}
             >
-              {({ isActive }) => (
-                <>
-                  {isActive && !sidebarCollapsed && (
-                    <div className="bg-violet-400 absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full" />
-                  )}
-                  <item.icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-violet-700 dark:text-sidebar-foreground" : ""}`} />
-                  {!sidebarCollapsed && <span className="text-[13px] font-medium truncate">{item.name}</span>}
-                </>
-              )}
+              <>
+                {active && !sidebarCollapsed && (
+                  <div className="bg-violet-400 absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full" />
+                )}
+                <item.icon className={`w-4 h-4 flex-shrink-0 ${active ? "text-violet-700 dark:text-sidebar-foreground" : ""}`} />
+                {!sidebarCollapsed && <span className="text-[13px] font-medium truncate">{item.name}</span>}
+              </>
             </NavLink>
-          ))}
+            );
+          })}
         </nav>
 
         <div className="border-sidebar-border flex-shrink-0 border-t p-2">
           <NavLink
-            to="/client/account"
+            to="/engineer/account"
             className={({ isActive }) =>
               `flex items-center gap-3 px-2 py-2 rounded-md transition-all group relative ${
                 isActive
@@ -223,18 +244,17 @@ export function ClientLayout() {
                     )}
                   </div>
                   <div className="flex-1 overflow-y-auto">
-                    {clientNotifications.length === 0 ? (
+                    {engineerNotifications.length === 0 ? (
                       <div className="py-12 text-center text-[13px] text-muted-foreground">No notifications yet</div>
                     ) : (
-                      clientNotifications.slice(0, 8).map((n) => (
+                      engineerNotifications.slice(0, 8).map((n) => (
                         <div
                           key={n.id}
                           className={`flex gap-3 px-4 py-3 border-b cursor-pointer hover:bg-muted/40 ${n.unread ? "bg-violet-50/40" : ""}`}
                           onClick={() => {
                             markNotificationRead(n.id);
                             if (n.href) {
-                              const href = n.href.startsWith("/tickets/") ? n.href.replace("/tickets/", "/client/tickets/") : n.href;
-                              navigate(href);
+                              navigate(mapNotificationHref(n.href));
                               setNotifOpen(false);
                             }
                           }}
@@ -272,12 +292,12 @@ export function ClientLayout() {
                   </div>
                   <div className="text-left hidden sm:block">
                     <div className="text-foreground text-[13px] font-medium leading-tight">{user.name}</div>
-                    <div className="text-muted-foreground text-[11px] leading-tight">{user.jobTitle ?? "Client Contact"}</div>
+                    <div className="text-muted-foreground text-[11px] leading-tight">{user.jobTitle ?? "Field Engineer"}</div>
                   </div>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem className="text-[13px]" onSelect={() => navigate("/client/account")}>
+                <DropdownMenuItem className="text-[13px]" onSelect={() => navigate("/engineer/account")}>
                   <UserCircle className="w-3.5 h-3.5 mr-2" />
                   Account Settings
                 </DropdownMenuItem>
@@ -299,8 +319,8 @@ export function ClientLayout() {
       <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sign out of client portal?</AlertDialogTitle>
-            <AlertDialogDescription>You will need to sign in again to access your tickets and knowledge base.</AlertDialogDescription>
+            <AlertDialogTitle>Sign out of field engineer portal?</AlertDialogTitle>
+            <AlertDialogDescription>You will need to sign in again to access your assigned tickets and knowledge base.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>

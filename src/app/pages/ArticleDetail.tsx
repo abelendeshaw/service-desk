@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams, useLocation } from 'react-router';
 import {
   ArrowLeft, Eye, Calendar, User, Pencil, Tag,
   MessageSquare, Share2, Printer,
@@ -12,6 +12,7 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Separator } from '../components/ui/separator';
 import { useServiceDesk } from '../store/serviceDeskStore';
+import { getKnowledgeBasePaths } from '../lib/portalPaths';
 
 // Sample article data — in production this would come from an API
 const articlesData: Record<string, {
@@ -167,6 +168,8 @@ const DefaultArticleContent = () => (
 
 export function ArticleDetail() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const paths = getKnowledgeBasePaths(location.pathname);
   const { ticketId } = useParams<{ ticketId: string }>();
   const [showMore, setShowMore] = useState(false);
   const { tickets, ticketArticles, getOrCreateTicketArticle } = useServiceDesk();
@@ -196,7 +199,7 @@ export function ArticleDetail() {
       {/* Breadcrumb / Top Nav */}
       <div className="bg-background border-b px-6 h-[44px] flex items-center gap-2 flex-shrink-0">
         <Button
-          onClick={() => navigate(ticket ? `/knowledge/project/${ticket.project}` : '/knowledge')}
+          onClick={() => navigate(paths.knowledgeRoot)}
           variant="ghost"
           size="sm"
           className="h-auto gap-1.5 p-0 text-[12px]"
@@ -219,7 +222,7 @@ export function ArticleDetail() {
                   Ticket <span className="font-semibold">#{ticketId}</span> doesn't exist or its knowledge article could not be loaded.{' '}
                   <button
                     className="underline hover:no-underline font-medium"
-                    onClick={() => navigate('/knowledge')}
+                    onClick={() => navigate(paths.knowledgeRoot)}
                   >
                     Go back to Knowledge Base
                   </button>
@@ -300,7 +303,7 @@ export function ArticleDetail() {
                       Print
                     </Button>
                     <Button
-                      onClick={() => navigate(`/knowledge/edit/${ticket.id}`)}
+                      onClick={() => navigate(paths.articleEdit(ticket.id))}
                       size="sm"
                       className="h-7 gap-1.5 px-3 text-[12px]"
                     >
@@ -410,7 +413,7 @@ export function ArticleDetail() {
                   ].map(rel => (
                     <Button
                       key={rel.ticketId}
-                      onClick={() => navigate(`/knowledge/ticket/${rel.ticketId}`)}
+                      onClick={() => navigate(paths.articleView(rel.ticketId))}
                       variant="ghost"
                       className="h-auto w-full justify-start p-0 text-left"
                     >

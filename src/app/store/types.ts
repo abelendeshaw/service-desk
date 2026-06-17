@@ -191,7 +191,7 @@ export type ClientArticle = {
   views: number;
 };
 
-export type UserRole = "staff" | "client";
+export type UserRole = "staff" | "client" | "engineer";
 
 export type AuthUser = {
   id: string;
@@ -202,5 +202,6 @@ export type AuthUser = {
   company: string;
   phone?: string;
   jobTitle?: string;
+  engineerId?: string;
 };
 

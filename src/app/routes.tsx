@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from "react-router";
 import { MainLayout } from "./components/MainLayout";
 import { ClientLayout } from "./components/ClientLayout";
+import { EngineerLayout } from "./components/EngineerLayout";
 import { RequireStaff } from "./components/RequireAuth";
 import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
@@ -33,6 +34,10 @@ import { ClientTicketDetail } from "./pages/client/ClientTicketDetail";
 import { ClientKnowledgeBase } from "./pages/client/ClientKnowledgeBase";
 import { ClientArticleDetail } from "./pages/client/ClientArticleDetail";
 import { ClientAccount } from "./pages/client/ClientAccount";
+import { EngineerTickets } from "./pages/engineer/EngineerTickets";
+import { EngineerTicketDetail } from "./pages/engineer/EngineerTicketDetail";
+import { EngineerKnowledgeBase } from "./pages/engineer/EngineerKnowledgeBase";
+import { EngineerAccount } from "./pages/engineer/EngineerAccount";
 
 function StaffShell() {
   return (
@@ -55,6 +60,19 @@ export const router = createBrowserRouter([
       { path: "knowledge", Component: ClientKnowledgeBase },
       { path: "knowledge/:id", Component: ClientArticleDetail },
       { path: "account", Component: ClientAccount },
+    ],
+  },
+  {
+    path: "/engineer",
+    Component: EngineerLayout,
+    children: [
+      { index: true, Component: EngineerDashboard },
+      { path: "tickets", Component: EngineerTickets },
+      { path: "tickets/:id", Component: EngineerTicketDetail },
+      { path: "knowledge", Component: EngineerKnowledgeBase },
+      { path: "knowledge/ticket/:ticketId", Component: ArticleDetail },
+      { path: "knowledge/edit/:ticketId", Component: CreateArticle },
+      { path: "account", Component: EngineerAccount },
     ],
   },
   {
@@ -87,7 +105,7 @@ export const router = createBrowserRouter([
       { path: "reports", Component: Reports },
       { path: "reports/:id", Component: ReportDetail },
       { path: "client-dashboard", element: <Navigate to="/client" replace /> },
-      { path: "engineer-dashboard", Component: EngineerDashboard },
+      { path: "engineer-dashboard", element: <Navigate to="/engineer" replace /> },
       { path: "settings", Component: Settings },
     ],
   },
