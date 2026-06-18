@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../components/ui/select";
+import { getClientSLAs } from "../../lib/ticketProjects";
 import { getTicketSupportType, supportTypeBadgeClass, supportTypeExplanation } from "../../lib/ticketSupportType";
 import { useAuth } from "../../store/authStore";
 import { useServiceDesk } from "../../store/serviceDeskStore";
@@ -31,7 +32,15 @@ export function ClientCreateTicket() {
     subject: "",
     priority: "Medium" as Exclude<TicketPriority, null>,
     description: "",
+    slaId: "",
   });
+
+  const clientProjects = useMemo(
+    () => (user ? getClientSLAs(user.company, slas) : []),
+    [user, slas],
+  );
+
+  const selectedSLA = clientProjects.find((s) => s.id === form.slaId);
 
   const supportType = useMemo(
     () => (user ? getTicketSupportType(slas, user.company) : "Normal Support"),
@@ -44,11 +53,14 @@ export function ClientCreateTicket() {
 
   if (!user) return null;
 
+  const projectValid = Boolean(form.slaId && selectedSLA);
   const subjectValid = form.subject.trim().length >= 3;
   const descriptionValid = form.description.trim().length >= 10;
-  const canContinue = subjectValid && descriptionValid;
+  const canContinue = projectValid && subjectValid && descriptionValid;
 
-  const validationMessage = !subjectValid
+  const validationMessage = !projectValid
+    ? "Select a project for this ticket."
+    : !subjectValid
     ? "Enter a subject with at least 3 characters."
     : !descriptionValid
       ? `Description needs at least 10 characters (${form.description.trim().length}/10).`
@@ -60,8 +72,12 @@ export function ClientCreateTicket() {
   };
 
   const handleSubmit = () => {
+    if (!selectedSLA) return;
     const id = createTicket({
       project: user.company,
+      projectName: selectedSLA.projectName,
+      slaId: selectedSLA.id,
+      category: "General",
       contactName: user.name,
       supportType,
       subject: form.subject.trim(),
@@ -154,6 +170,20 @@ export function ClientCreateTicket() {
                 <p className="text-[11px] leading-relaxed text-muted-foreground">{supportExplanation}</p>
               </div>
               <div>
+                <Label className="mb-1.5 block text-[12px]">Project <span className="text-red-500">*</span></Label>
+                <Select
+                  value={form.slaId}
+                  onValueChange={(v) => setForm((p) => ({ ...p, slaId: v }))}
+                >
+                  <SelectTrigger className="h-9 text-[13px]"><SelectValue placeholder="Select project" /></SelectTrigger>
+                  <SelectContent>
+                    {clientProjects.map((sla) => (
+                      <SelectItem key={sla.id} value={sla.id}>{sla.projectName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label className="mb-1.5 block text-[12px]">Subject <span className="text-red-500">*</span></Label>
                 <Input
                   value={form.subject}
@@ -201,6 +231,7 @@ export function ClientCreateTicket() {
               {[
                 { label: "Created By", value: `${user.name} (${user.email})` },
                 { label: "Organization", value: user.company },
+                { label: "Project", value: selectedSLA?.projectName ?? "—" },
                 { label: "Subject", value: form.subject },
                 { label: "Priority", value: form.priority },
               ].map(({ label, value }) => (

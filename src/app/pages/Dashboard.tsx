@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
@@ -35,6 +35,15 @@ import {
   TableHeader,
   TableRow,
 } from '../components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import { useServiceDesk } from '../store/serviceDeskStore';
+import { getCurrentFiscalYear } from '../lib/selamnewCore';
 
 const kpis = [
   {
@@ -137,10 +146,58 @@ const fieldEngineerPerformance = [
 
 const statusConfig: Record<string, { label: string; dot: string; text: string }> = {
   Open: { label: 'Open', dot: '#2563eb', text: '#1d4ed8' },
+  'In Progress': { label: 'In Progress', dot: '#d97706', text: '#b45309' },
   Escalated: { label: 'Escalated', dot: '#dc2626', text: '#dc2626' },
+  Resolved: { label: 'Resolved', dot: '#059669', text: '#059669' },
   Pending: { label: 'Pending', dot: '#d97706', text: '#b45309' },
   Closed: { label: 'Closed', dot: '#6c757d', text: '#6c757d' },
 };
+
+const recentPriorityOptions = [
+  { value: 'all', label: 'All priorities' },
+  { value: 'critical', label: 'Critical' },
+  { value: 'high', label: 'High' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'low', label: 'Low' },
+  { value: 'none', label: 'Unset' },
+] as const;
+
+const distributionStatusOptions = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'open', label: 'Open' },
+  { value: 'in progress', label: 'In Progress' },
+  { value: 'escalated', label: 'Escalated' },
+  { value: 'resolved', label: 'Resolved' },
+  { value: 'closed', label: 'Closed' },
+] as const;
+
+const recentAgeOptions = [
+  { value: 'all', label: 'All ages' },
+  { value: '7d', label: '≤ 7 days' },
+  { value: '30d', label: '8–30 days' },
+  { value: 'older', label: '30+ days' },
+] as const;
+
+function ticketAgeDays(createdAt: string) {
+  return Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000));
+}
+
+function matchesRecentAgeFilter(ageDays: number, ageFilter: string) {
+  if (ageFilter === 'all') return true;
+  if (ageFilter === '7d') return ageDays <= 7;
+  if (ageFilter === '30d') return ageDays >= 8 && ageDays <= 30;
+  if (ageFilter === 'older') return ageDays > 30;
+  return true;
+}
+
+function matchesPriorityFilter(
+  priority: string | null,
+  priorityFilter: string,
+) {
+  if (priorityFilter === 'all') return true;
+  if (priorityFilter === 'none') return priority === null;
+  return priority?.toLowerCase() === priorityFilter;
+}
 
 const trendChartConfig = {
   created: {
@@ -166,14 +223,200 @@ const priorityChartConfig = {
   value: { label: 'Tickets', color: '#0b2235' },
   Critical: { label: 'Critical', color: '#dc2626' },
   High: { label: 'High', color: '#d97706' },
+  Medium: { label: 'Medium', color: '#f59e0b' },
   Low: { label: 'Low', color: '#2563eb' },
-  Unassigned: { label: 'Unassigned', color: '#e2e8f0' },
+  Unassigned: { label: 'Unset', color: '#94a3b8' },
 } satisfies ChartConfig;
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const { tickets, engineers } = useServiceDesk();
   const [period, setPeriod] = useState('7d');
-  const totalStatusTickets = statusData.reduce((a, b) => a + b.value, 0);
+  const [recentPriorityFilter, setRecentPriorityFilter] = useState('all');
+  const [recentAgeFilter, setRecentAgeFilter] = useState('all');
+  const [distributionStatusFilter, setDistributionStatusFilter] = useState('all');
+  const [distributionPriorityFilter, setDistributionPriorityFilter] = useState('all');
+  const fiscalYear = getCurrentFiscalYear();
+
+  const periodStart = useMemo(() => {
+    const d = new Date();
+    if (period === '7d') d.setDate(d.getDate() - 7);
+    else if (period === '30d') d.setDate(d.getDate() - 30);
+    else d.setDate(d.getDate() - 90);
+    return d;
+  }, [period]);
+
+  const periodTickets = useMemo(
+    () => tickets.filter((t) => new Date(t.createdAt) >= periodStart),
+    [tickets, periodStart],
+  );
+
+  const kpisLive = useMemo(() => [
+    {
+      key: 'total',
+      label: 'Total Tickets',
+      value: periodTickets.length,
+      change: `${tickets.length} all time`,
+      changeLabel: fiscalYear.label,
+      up: true,
+      icon: Ticket,
+      color: '#7c3aed',
+      bgColor: '#f5f3ff',
+    },
+    {
+      key: 'open',
+      label: 'Open',
+      value: tickets.filter((t) => t.status === 'Open').length,
+      change: `${periodTickets.filter((t) => t.status === 'Open').length} new`,
+      changeLabel: `in ${period}`,
+      up: true,
+      icon: Zap,
+      color: '#2563eb',
+      bgColor: '#eff6ff',
+    },
+    {
+      key: 'resolved',
+      label: 'Resolved',
+      value: tickets.filter((t) => t.status === 'Resolved' || t.status === 'Closed').length,
+      change: `${periodTickets.filter((t) => t.status === 'Resolved').length} this period`,
+      changeLabel: 'awaiting close',
+      up: true,
+      icon: CheckCircle2,
+      color: '#059669',
+      bgColor: '#f0fdf4',
+    },
+    {
+      key: 'overdue',
+      label: 'Overdue',
+      value: tickets.filter((t) => t.resolutionDueDate && new Date(t.resolutionDueDate) < new Date() && t.status !== 'Closed').length,
+      change: 'due date passed',
+      changeLabel: 'needs attention',
+      up: false,
+      icon: Clock,
+      color: '#d97706',
+      bgColor: '#fffbeb',
+    },
+    {
+      key: 'sla',
+      label: 'Escalated',
+      value: tickets.filter((t) => t.status === 'Escalated').length,
+      change: `${periodTickets.filter((t) => t.status === 'Escalated').length} in period`,
+      changeLabel: 'active escalations',
+      up: false,
+      icon: AlertTriangle,
+      color: '#dc2626',
+      bgColor: '#fef2f2',
+    },
+  ], [periodTickets, tickets, period, fiscalYear.label]);
+
+  const distributionTickets = useMemo(() => {
+    return periodTickets.filter((t) => {
+      if (
+        distributionStatusFilter !== 'all' &&
+        t.status.toLowerCase() !== distributionStatusFilter
+      ) {
+        return false;
+      }
+      return matchesPriorityFilter(t.priority, distributionPriorityFilter);
+    });
+  }, [periodTickets, distributionStatusFilter, distributionPriorityFilter]);
+
+  const statusDataLive = useMemo(() => {
+    const counts: Record<string, number> = {
+      Open: 0,
+      'In Progress': 0,
+      Escalated: 0,
+      Resolved: 0,
+      Closed: 0,
+    };
+    distributionTickets.forEach((t) => {
+      counts[t.status] = (counts[t.status] ?? 0) + 1;
+    });
+    return [
+      { name: 'Open', value: counts.Open, color: '#2563eb' },
+      { name: 'In Progress', value: counts['In Progress'], color: '#d97706' },
+      { name: 'Escalated', value: counts.Escalated, color: '#dc2626' },
+      { name: 'Resolved', value: counts.Resolved, color: '#059669' },
+      { name: 'Closed', value: counts.Closed, color: '#6c757d' },
+    ].filter((s) => s.value > 0);
+  }, [distributionTickets]);
+
+  const priorityDataLive = useMemo(() => {
+    const counts: Record<string, number> = {
+      Critical: 0,
+      High: 0,
+      Medium: 0,
+      Low: 0,
+      Unassigned: 0,
+    };
+    distributionTickets.forEach((t) => {
+      if (t.priority) {
+        counts[t.priority] = (counts[t.priority] ?? 0) + 1;
+      } else {
+        counts.Unassigned += 1;
+      }
+    });
+    return [
+      { name: 'Critical', value: counts.Critical, color: '#dc2626' },
+      { name: 'High', value: counts.High, color: '#d97706' },
+      { name: 'Medium', value: counts.Medium, color: '#f59e0b' },
+      { name: 'Low', value: counts.Low, color: '#2563eb' },
+      { name: 'Unassigned', value: counts.Unassigned, color: '#94a3b8' },
+    ].filter((p) => p.value > 0);
+  }, [distributionTickets]);
+
+  const recentTicketsLive = useMemo(
+    () =>
+      [...tickets]
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .map((t) => {
+          const ageDays = ticketAgeDays(t.createdAt);
+          return {
+            ticketId: t.id,
+            id: `#${t.id}`,
+            subject: t.subject,
+            status: t.status,
+            priority: t.priority,
+            ageDays,
+            age: `${ageDays}d`,
+            company: t.project,
+            initials: t.project.slice(0, 2).toUpperCase(),
+            color: '#7c3aed',
+          };
+        }),
+    [tickets],
+  );
+
+  const filteredRecentTickets = useMemo(() => {
+    return recentTicketsLive
+      .filter((t) => {
+        if (!matchesPriorityFilter(t.priority, recentPriorityFilter)) return false;
+        return matchesRecentAgeFilter(t.ageDays, recentAgeFilter);
+      })
+      .slice(0, 8);
+  }, [recentTicketsLive, recentPriorityFilter, recentAgeFilter]);
+
+  const fieldEngineerPerformanceLive = useMemo(
+    () =>
+      engineers.map((eng, i) => {
+        const assigned = tickets.filter((t) => t.assignedEngineerIds?.includes(eng.id)).length;
+        const resolved = tickets.filter(
+          (t) => t.assignedEngineerIds?.includes(eng.id) && (t.status === 'Resolved' || t.status === 'Closed'),
+        ).length;
+        return {
+          name: eng.name,
+          email: eng.email,
+          assigned,
+          resolved,
+          rate: assigned ? Math.round((resolved / assigned) * 100) : 0,
+          initials: eng.initials,
+          color: ['#7c3aed', '#1d4ed8', '#0891b2', '#059669', '#d97706'][i % 5],
+        };
+      }),
+    [engineers, tickets],
+  );
+
+  const totalDistributionTickets = distributionTickets.length;
 
   return (
     <div className="min-h-full space-y-5 bg-muted/30 p-6">
@@ -182,7 +425,9 @@ export function Dashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[20px] font-semibold tracking-tight">Dashboard</h1>
-          <p className="mt-0.5 text-[13px] text-muted-foreground">Service Desk Overview · Updated {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
+            Service Desk Overview · {fiscalYear.label} · Updated {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -197,7 +442,7 @@ export function Dashboard() {
 
       {/* KPI Row */}
       <div className="grid grid-cols-5 gap-4">
-        {kpis.map((kpi) => (
+        {kpisLive.map((kpi) => (
           <Card key={kpi.key} className="cursor-default gap-3 p-4 transition-all hover:shadow-sm">
             <div className="mb-1 flex items-start justify-between">
               <kpi.icon className="h-4 w-4" style={{ color: kpi.color }} />
@@ -223,7 +468,7 @@ export function Dashboard() {
               <MonitorSmartphone className="w-5 h-5 text-violet-600" />
             </div>
             <div className="flex-1">
-              <div className="text-[14px] font-semibold">Client Portal</div>
+              <div className="text-[14px] font-semibold">Selamnew Service Desk</div>
               <div className="text-[12px] text-muted-foreground">View from a client's perspective</div>
             </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
@@ -296,14 +541,49 @@ export function Dashboard() {
 
         {/* Status Distribution */}
         <Card className="gap-0 p-0">
-          <CardHeader>
-            <CardTitle className="text-[14px]">Status Distribution</CardTitle>
-            <CardDescription className="text-[12px]">{totalStatusTickets} total tickets</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+            <div className="min-w-0">
+              <CardTitle className="text-[14px]">Status Distribution</CardTitle>
+              <CardDescription className="text-[12px]">
+                {totalDistributionTickets} ticket{totalDistributionTickets === 1 ? '' : 's'} in {period}
+              </CardDescription>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              <Select value={distributionStatusFilter} onValueChange={setDistributionStatusFilter}>
+                <SelectTrigger className="h-8 w-[128px] text-[12px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {distributionStatusOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value} className="text-[12px]">
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={distributionPriorityFilter} onValueChange={setDistributionPriorityFilter}>
+                <SelectTrigger className="h-8 w-[128px] text-[12px]">
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  {recentPriorityOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value} className="text-[12px]">
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent>
 
+          {totalDistributionTickets === 0 ? (
+            <div className="flex h-[170px] items-center justify-center text-[13px] text-muted-foreground">
+              No tickets match the selected filters.
+            </div>
+          ) : (
           <ChartContainer config={statusChartConfig} className="h-[170px] w-full">
-            <BarChart data={statusData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+            <BarChart data={statusDataLive} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
               <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
@@ -311,17 +591,23 @@ export function Dashboard() {
                 content={<ChartTooltipContent formatter={(value) => <span className="font-medium">{value} tickets</span>} />}
               />
               <Bar dataKey="value" radius={4}>
-                {statusData.map((entry) => (
+                {statusDataLive.map((entry) => (
                   <Cell key={entry.name} fill={entry.color} />
                 ))}
               </Bar>
             </BarChart>
           </ChartContainer>
+          )}
 
           <div className="mt-5 border-t pt-4">
             <h4 className="mb-3 text-[13px] font-semibold">Priority Breakdown</h4>
+            {totalDistributionTickets === 0 ? (
+              <div className="flex h-[140px] items-center justify-center text-[13px] text-muted-foreground">
+                No tickets match the selected filters.
+              </div>
+            ) : (
             <ChartContainer config={priorityChartConfig} className="h-[140px] w-full">
-              <BarChart data={priorityData} layout="vertical" margin={{ top: 0, right: 8, left: 8, bottom: 0 }}>
+              <BarChart data={priorityDataLive} layout="vertical" margin={{ top: 0, right: 8, left: 8, bottom: 0 }}>
                 <CartesianGrid horizontal={false} strokeDasharray="3 3" />
                 <XAxis type="number" hide />
                 <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} width={72} />
@@ -329,12 +615,13 @@ export function Dashboard() {
                   content={<ChartTooltipContent formatter={(value) => <span className="font-medium">{value} tickets</span>} />}
                 />
                 <Bar dataKey="value" radius={4}>
-                  {priorityData.map((entry) => (
+                  {priorityDataLive.map((entry) => (
                     <Cell key={entry.name} fill={entry.color} />
                   ))}
                 </Bar>
               </BarChart>
             </ChartContainer>
+            )}
           </div>
           </CardContent>
         </Card>
@@ -344,19 +631,47 @@ export function Dashboard() {
       <div className="grid grid-cols-3 gap-4">
         {/* Recent Tickets */}
         <Card className="col-span-2 gap-0 overflow-hidden p-0">
-          <CardHeader className="flex items-center justify-between border-b">
+          <CardHeader className="flex flex-col gap-3 border-b sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="text-[14px]">Recent Tickets</CardTitle>
-              <CardDescription className="mt-0.5 text-[12px]">Latest {recentTickets.length} tickets</CardDescription>
+              <CardDescription className="mt-0.5 text-[12px]">
+                {filteredRecentTickets.length} of {recentTicketsLive.length} tickets
+              </CardDescription>
             </div>
-            <Button
-              onClick={() => navigate('/tickets')}
-              variant="ghost"
-              size="sm"
-              className="gap-1 text-[12px]"
-            >
-              View all <ChevronRight className="w-3.5 h-3.5" />
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={recentPriorityFilter} onValueChange={setRecentPriorityFilter}>
+                <SelectTrigger className="h-8 w-[140px] text-[12px]">
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  {recentPriorityOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value} className="text-[12px]">
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={recentAgeFilter} onValueChange={setRecentAgeFilter}>
+                <SelectTrigger className="h-8 w-[130px] text-[12px]">
+                  <SelectValue placeholder="Age" />
+                </SelectTrigger>
+                <SelectContent>
+                  {recentAgeOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value} className="text-[12px]">
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={() => navigate('/tickets')}
+                variant="ghost"
+                size="sm"
+                className="gap-1 text-[12px]"
+              >
+                View all <ChevronRight className="w-3.5 h-3.5" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
           <Table>
@@ -369,12 +684,19 @@ export function Dashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentTickets.map((t) => {
+              {filteredRecentTickets.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="px-5 py-10 text-center text-[13px] text-muted-foreground">
+                    No tickets match the selected filters.
+                  </TableCell>
+                </TableRow>
+              ) : (
+              filteredRecentTickets.map((t) => {
                 const sc = statusConfig[t.status];
                 return (
                   <TableRow
-                    key={t.id}
-                    onClick={() => navigate(`/tickets/${t.id}`)}
+                    key={t.ticketId}
+                    onClick={() => navigate(`/tickets/${t.ticketId}`)}
                     className="cursor-pointer"
                   >
                     <TableCell className="px-5 py-3">
@@ -409,7 +731,8 @@ export function Dashboard() {
                     </TableCell>
                   </TableRow>
                 );
-              })}
+              })
+              )}
             </TableBody>
           </Table>
           </CardContent>
@@ -419,11 +742,11 @@ export function Dashboard() {
         <Card className="gap-0 overflow-hidden p-0">
           <CardHeader className="border-b">
             <CardTitle className="text-[14px]">Field Engineer Performance</CardTitle>
-            <CardDescription className="mt-0.5 text-[12px]">{fieldEngineerPerformance.length} Field Engineers tracked</CardDescription>
+            <CardDescription className="mt-0.5 text-[12px]">{fieldEngineerPerformanceLive.length} Field Engineers tracked</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
           <div className="divide-y">
-            {fieldEngineerPerformance.map((fieldEngineer) => (
+            {fieldEngineerPerformanceLive.map((fieldEngineer) => (
               <div key={fieldEngineer.name} className="px-5 py-3 transition-colors hover:bg-muted/50">
                 <div className="flex items-center gap-2.5 mb-2">
                   <div

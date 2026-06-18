@@ -32,6 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Separator } from '../components/ui/separator';
 import { Textarea } from '../components/ui/textarea';
 import { RowActionsMenu } from '../components/RowActionsMenu';
+import { ConvertEmailToTicketDialog } from '../components/ConvertEmailToTicketDialog';
 import { useServiceDesk } from '../store/serviceDeskStore';
 
 const avatarColors = ['#7c3aed', '#1d4ed8', '#0891b2', '#059669', '#d97706', '#dc2626'];
@@ -43,9 +44,10 @@ export function EmailSupportDetail() {
   const navigate = useNavigate();
   const params = useParams();
   const emailId = params.id ?? '';
-  const { emailThreads, convertEmailToTicket } = useServiceDesk();
+  const { emailThreads } = useServiceDesk();
   const thread = emailThreads.find((t) => t.id === emailId);
   const [replyOpen, setReplyOpen] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [status, setStatus] = useState('Open');
   const [priority, setPriority] = useState('Critical');
@@ -112,16 +114,18 @@ export function EmailSupportDetail() {
             {starred ? <Star className="w-4 h-4 text-amber-400 fill-amber-400" /> : <StarOff className="w-4 h-4" />}
           </Button>
           <Button
-            variant="ghost"
             size="sm"
             className="h-7 gap-1.5 px-2.5 text-[12px]"
             onClick={() => {
-              const ticketId = convertEmailToTicket({ emailId: thread.id, project: "EPSS", supportType: "Technical Support" });
-              navigate(`/tickets/${ticketId}`);
+              if (thread.linkedTicketId) {
+                navigate(`/tickets/${thread.linkedTicketId}`);
+                return;
+              }
+              setConvertOpen(true);
             }}
           >
             <Ticket className="w-3.5 h-3.5" />
-            Convert to Ticket
+            {thread.linkedTicketId ? `View Ticket #${thread.linkedTicketId}` : 'Create Ticket'}
           </Button>
           <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2.5 text-[12px] text-red-700 hover:text-red-800">
             <Trash2 className="w-3.5 h-3.5" />
@@ -432,14 +436,34 @@ export function EmailSupportDetail() {
               <CardTitle className="text-[11px] uppercase tracking-wider text-muted-foreground">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1.5 px-4 pb-4 pt-0">
-              <Button variant="outline" className="h-8 w-full justify-start gap-2 px-3 text-[12px]">
+              <Button
+                variant="outline"
+                className="h-8 w-full justify-start gap-2 px-3 text-[12px]"
+                onClick={() => {
+                  if (thread.linkedTicketId) {
+                    navigate(`/tickets/${thread.linkedTicketId}`);
+                    return;
+                  }
+                  setConvertOpen(true);
+                }}
+              >
                 <Ticket className="w-3.5 h-3.5" />
-                Convert to Ticket
+                {thread.linkedTicketId ? `View Ticket #${thread.linkedTicketId}` : 'Create Ticket'}
               </Button>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <ConvertEmailToTicketDialog
+        thread={thread ?? null}
+        open={convertOpen && !thread.linkedTicketId}
+        onOpenChange={setConvertOpen}
+        onCreated={(ticketId) => {
+          setConvertOpen(false);
+          navigate(`/tickets/${ticketId}`);
+        }}
+      />
       </>
       )}
     </div>

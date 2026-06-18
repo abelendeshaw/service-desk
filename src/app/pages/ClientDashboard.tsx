@@ -101,7 +101,7 @@ export function ClientDashboard() {
             {user.initials}
           </div>
           <div>
-            <h1 className="text-[20px] font-semibold tracking-tight">Client Portal</h1>
+            <h1 className="text-[20px] font-semibold tracking-tight">Selamnew Service Desk</h1>
             <p className="mt-0.5 text-[13px] text-muted-foreground">
               Welcome back, {user.name} · {user.company}
             </p>

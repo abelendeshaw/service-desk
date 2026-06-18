@@ -11,7 +11,7 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { Badge } from '../components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
-import { useServiceDesk } from '../store/serviceDeskStore';
+import { useServiceDesk, draftTicketArticle } from '../store/serviceDeskStore';
 import { getTicketSupportType, supportTypeBadgeClass } from '../lib/ticketSupportType';
 import { getKnowledgeBasePaths } from '../lib/portalPaths';
 
@@ -50,8 +50,15 @@ export function CreateArticle() {
     slas,
   } = useServiceDesk();
   const ticket = tickets.find((t) => t.id === ticketId);
-  const article = ticketId
-    ? (ticketArticles[ticketId] ?? getOrCreateTicketArticle({ ticketId }))
+
+  useEffect(() => {
+    if (ticketId && ticket && !ticketArticles[ticketId]) {
+      getOrCreateTicketArticle({ ticketId });
+    }
+  }, [ticketId, ticket, ticketArticles, getOrCreateTicketArticle]);
+
+  const article = ticketId && ticket
+    ? (ticketArticles[ticketId] ?? draftTicketArticle(ticket))
     : null;
   const supportType = ticket ? getTicketSupportType(slas, ticket.project) : null;
 

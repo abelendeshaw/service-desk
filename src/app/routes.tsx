@@ -21,6 +21,7 @@ import { CreateArticle } from "./pages/CreateArticle";
 import { SLAManagement } from "./pages/SLAManagement";
 import { CreateSLA } from "./pages/CreateSLA";
 import { SLADetail } from "./pages/SLADetail";
+import { ProjectDetail } from "./pages/ProjectDetail";
 import { EmailSupportDetail } from "./pages/EmailSupportDetail";
 import { CreateEmailSupport } from "./pages/CreateEmailSupport";
 import { Settings } from "./pages/Settings";
@@ -100,6 +101,7 @@ export const router = createBrowserRouter([
       { path: "sla", Component: SLAManagement },
       { path: "sla/new", Component: CreateSLA },
       { path: "sla/:id", Component: SLADetail },
+      { path: "projects/:id", Component: ProjectDetail },
       { path: "email-support/new", Component: CreateEmailSupport },
       { path: "email-support/:id", Component: EmailSupportDetail },
       { path: "reports", Component: Reports },

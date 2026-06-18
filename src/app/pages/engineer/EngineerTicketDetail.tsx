@@ -24,7 +24,11 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Separator } from "../../components/ui/separator";
 import { Textarea } from "../../components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "../../components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
+import { getTicketProjectName } from "../../lib/ticketProjects";
 import { resolveTicketSupportType, supportTypeBadgeClass } from "../../lib/ticketSupportType";
 import { isTicketAssignedToEngineer } from "../../lib/engineerTickets";
 import { useAuth } from "../../store/authStore";
@@ -78,8 +82,10 @@ export function EngineerTicketDetail() {
   const { id = "" } = useParams();
   const ticketId = id.replace("#", "");
   const { user } = useAuth();
-  const { tickets, engineers, addTicketComment, getOrCreateTicketArticle, slas } = useServiceDesk();
+  const { tickets, engineers, addTicketComment, getOrCreateTicketArticle, slas, updateTicketStatus } = useServiceDesk();
   const [comment, setComment] = useState("");
+  const [resolveOpen, setResolveOpen] = useState(false);
+  const [resolutionNotes, setResolutionNotes] = useState("");
 
   const ticket = tickets.find((t) => t.id === ticketId);
   const isAssigned = ticket ? isTicketAssignedToEngineer(ticket, user?.engineerId) : false;
@@ -133,6 +139,28 @@ export function EngineerTicketDetail() {
   const sc = statusColors[ticket.status] ?? statusColors.Open;
   const supportType = resolveTicketSupportType(ticket, slas);
 
+  const handleResolve = () => {
+    if (!ticket || !user) return;
+    const note = resolutionNotes.trim();
+    updateTicketStatus({
+      ticketId: ticket.id,
+      status: "Resolved",
+      reason: note || undefined,
+    });
+    if (note) {
+      addTicketComment({
+        ticketId: ticket.id,
+        body: note,
+        internal: false,
+        attachments: [],
+        author: { name: user.name, initials: user.initials, role: "Field Engineer" },
+      });
+    }
+    setResolveOpen(false);
+    setResolutionNotes("");
+    toast.success("Ticket marked as resolved");
+  };
+
   const handleComment = () => {
     if (!comment.trim() || !user) return;
     addTicketComment({
@@ -163,6 +191,16 @@ export function EngineerTicketDetail() {
         <Button
           size="sm"
           className="ml-auto h-7 gap-1.5 px-2.5 text-[12px]"
+          disabled={ticket.status === "Resolved" || ticket.status === "Closed"}
+          onClick={() => setResolveOpen(true)}
+        >
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          Resolve Ticket
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 gap-1.5 px-2.5 text-[12px]"
           onClick={() => {
             getOrCreateTicketArticle({ ticketId: ticket.id });
             navigate(`/engineer/knowledge/edit/${ticket.id}`);
@@ -207,7 +245,7 @@ export function EngineerTicketDetail() {
                 </div>
                 <div className="flex items-center gap-1">
                   <Building2 className="w-3.5 h-3.5" />
-                  {ticket.project}
+                  {getTicketProjectName(ticket, slas)}
                 </div>
                 <div className="flex items-center gap-1">
                   <User className="w-3.5 h-3.5" />
@@ -472,6 +510,30 @@ export function EngineerTicketDetail() {
           </div>
         </div>
       </div>
+
+      <Dialog open={resolveOpen} onOpenChange={setResolveOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Resolve Ticket</DialogTitle>
+            <DialogDescription>
+              Add an optional resolution note for the client. The ticket will await client confirmation before closing.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={resolutionNotes}
+            onChange={(e) => setResolutionNotes(e.target.value)}
+            placeholder="Describe what was done to resolve the issue... (optional)"
+            rows={5}
+            className="resize-none text-[13px]"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResolveOpen(false)}>Cancel</Button>
+            <Button onClick={handleResolve}>
+              Mark Resolved
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

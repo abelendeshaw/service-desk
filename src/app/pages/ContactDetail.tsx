@@ -14,11 +14,16 @@ import {
 } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '../components/ui/select';
 import { Separator } from '../components/ui/separator';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../components/ui/table';
 import { useServiceDesk } from '../store/serviceDeskStore';
+import { getTicketProjectName, ticketMatchesProjectFilter } from '../lib/ticketProjects';
 import { hasClientContact, type ClientContactInput } from '../lib/clientsData';
 import {
   calcSLAStatus, calcRemainingTime, calcDurationLabel,
@@ -62,9 +67,18 @@ type Tab = 'overview' | 'projects' | 'tickets';
 export function ContactDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { slas, tickets, clients, updateClientContact } = useServiceDesk();
+  const { slas, tickets, clients, updateClientContact, createSLA } = useServiceDesk();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [showAddContact, setShowAddContact] = useState(false);
+  const [showCreateSLA, setShowCreateSLA] = useState(false);
+  const [ticketProjectFilter, setTicketProjectFilter] = useState('all');
+  const [slaForm, setSlaForm] = useState({
+    projectName: '',
+    startDate: '',
+    endDate: '',
+    notes: '',
+  });
+  const [slaFormError, setSlaFormError] = useState('');
   const [contactForm, setContactForm] = useState<ClientContactInput>({
     name: '',
     email: '',
@@ -95,6 +109,14 @@ export function ContactDetail() {
         ? tickets.filter((t) => t.project === contact.company || t.contactName === contact.name)
         : [],
     [tickets, contact],
+  );
+
+  const filteredContactTickets = useMemo(
+    () =>
+      contactTickets.filter((t) =>
+        ticketMatchesProjectFilter(t, ticketProjectFilter, slas),
+      ),
+    [contactTickets, ticketProjectFilter, slas],
   );
 
   const slaStats = useMemo(() => {
@@ -136,6 +158,36 @@ export function ContactDetail() {
     });
     setContactFormError('');
     setShowAddContact(true);
+  };
+
+  const openCreateSLA = () => {
+    setSlaForm({ projectName: '', startDate: '', endDate: '', notes: '' });
+    setSlaFormError('');
+    setShowCreateSLA(true);
+  };
+
+  const handleCreateSLA = () => {
+    if (!slaForm.projectName.trim()) {
+      setSlaFormError('Project name is required.');
+      return;
+    }
+    if (!slaForm.startDate || !slaForm.endDate) {
+      setSlaFormError('Start and end dates are required.');
+      return;
+    }
+    if (slaForm.endDate < slaForm.startDate) {
+      setSlaFormError('End date must be after start date.');
+      return;
+    }
+    const id = createSLA({
+      companyName: contact.company,
+      projectName: slaForm.projectName.trim(),
+      startDate: slaForm.startDate,
+      endDate: slaForm.endDate,
+      notes: slaForm.notes.trim(),
+    });
+    setShowCreateSLA(false);
+    navigate(`/projects/${id}`);
   };
 
   const handleSaveContact = () => {
@@ -468,8 +520,9 @@ export function ContactDetail() {
         {/* ════════ PROJECTS ════════ */}
         {activeTab === 'projects' && (
           <div className="flex flex-col min-h-full">
-            {/* Stats row */}
-            <div className="flex items-center gap-5 border-b bg-background px-6 py-3 flex-shrink-0">
+            {contactSLAs.length > 0 && (
+            <div className="flex items-center justify-between gap-4 border-b bg-background px-6 py-3 flex-shrink-0">
+              <div className="flex items-center gap-5">
               <div className="text-[12px] text-muted-foreground">
                 <span className="font-semibold text-foreground">{slaStats.total}</span> project{slaStats.total !== 1 ? 's' : ''}
               </div>
@@ -497,7 +550,13 @@ export function ContactDetail() {
                   <span className="font-semibold text-blue-700">{slaStats.upcoming} Upcoming</span>
                 </div>
               )}
+              </div>
+              <Button size="sm" className="gap-1.5 text-[12px] h-8" onClick={openCreateSLA}>
+                <Plus className="w-3.5 h-3.5" />
+                Add Project / SLA
+              </Button>
             </div>
+            )}
 
             {/* Table */}
             <div className="flex-1 overflow-auto">
@@ -522,7 +581,11 @@ export function ContactDetail() {
                       const supportType = calcSupportType(status);
                       const supCfg = supportTypeConfig[supportType];
                       return (
-                        <TableRow key={sla.id} className="hover:bg-muted/30">
+                        <TableRow
+                          key={sla.id}
+                          className="cursor-pointer hover:bg-muted/30"
+                          onClick={() => navigate(`/projects/${sla.id}`)}
+                        >
                           <TableCell className="px-4 py-3.5 font-mono text-[12px] text-muted-foreground">{sla.id}</TableCell>
                           <TableCell className="px-4 py-3.5">
                             <div className="text-[13px] font-medium">{sla.projectName}</div>
@@ -562,6 +625,10 @@ export function ContactDetail() {
                       No projects have been created for {contact.company}
                     </div>
                   </div>
+                  <Button size="sm" className="gap-1.5 text-[13px]" onClick={openCreateSLA}>
+                    <Plus className="w-3.5 h-3.5" />
+                    Add Project / SLA
+                  </Button>
                 </div>
               )}
             </div>
@@ -571,12 +638,29 @@ export function ContactDetail() {
         {/* ════════ TICKETS ════════ */}
         {activeTab === 'tickets' && (
           <div className="flex flex-col min-h-full">
+            <div className="flex items-center gap-3 border-b bg-background px-6 py-3 flex-shrink-0">
+              <Select value={ticketProjectFilter} onValueChange={setTicketProjectFilter}>
+                <SelectTrigger className="h-8 w-[220px] text-[13px]">
+                  <SelectValue placeholder="All projects" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All projects</SelectItem>
+                  {contactSLAs.map((sla) => (
+                    <SelectItem key={sla.id} value={sla.id}>{sla.projectName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-[12px] text-muted-foreground">
+                {filteredContactTickets.length} ticket{filteredContactTickets.length !== 1 ? 's' : ''}
+              </span>
+            </div>
             <div className="flex-1 overflow-auto">
-              {contactTickets.length > 0 ? (
+              {filteredContactTickets.length > 0 ? (
                 <Table>
                   <TableHeader className="sticky top-0 z-10 bg-background">
                     <TableRow>
                       <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">ID</TableHead>
+                      <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Project</TableHead>
                       <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Subject</TableHead>
                       <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
                       <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Priority</TableHead>
@@ -584,7 +668,7 @@ export function ContactDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody className="bg-background">
-                    {contactTickets.map((ticket) => {
+                    {filteredContactTickets.map((ticket) => {
                       const sc = ticketStatusConfig[ticket.status] ?? ticketStatusConfig.Open;
                       const pc = ticket.priority ? ticketPriorityConfig[ticket.priority] : null;
                       return (
@@ -596,9 +680,11 @@ export function ContactDetail() {
                           <TableCell className="px-4 py-3.5 font-mono text-[12px] text-muted-foreground whitespace-nowrap">
                             {ticket.id}
                           </TableCell>
+                          <TableCell className="px-4 py-3.5 text-[12px] text-muted-foreground">
+                            {getTicketProjectName(ticket, slas)}
+                          </TableCell>
                           <TableCell className="px-4 py-3.5">
                             <div className="text-[13px] font-medium">{ticket.subject}</div>
-                            <div className="text-[11px] text-muted-foreground mt-0.5">{ticket.project}</div>
                           </TableCell>
                           <TableCell className="px-4 py-3.5">
                             <Badge variant="outline" className={`gap-1 text-[11px] ${sc.badgeClass}`}>
@@ -705,6 +791,63 @@ export function ContactDetail() {
             <Button size="sm" onClick={handleSaveContact}>
               Save Contact
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCreateSLA} onOpenChange={setShowCreateSLA}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[15px]">Add Project / SLA</DialogTitle>
+            <DialogDescription className="text-[12px]">
+              Create a new project SLA for {contact.company}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <div>
+              <Label className="text-[12px]">Project name <span className="text-red-500">*</span></Label>
+              <Input
+                className="mt-1.5 h-9 text-[13px]"
+                value={slaForm.projectName}
+                onChange={(e) => setSlaForm((p) => ({ ...p, projectName: e.target.value }))}
+                placeholder="e.g. Network Infrastructure Support"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-[12px]">Start date <span className="text-red-500">*</span></Label>
+                <Input
+                  type="date"
+                  className="mt-1.5 h-9 text-[13px]"
+                  value={slaForm.startDate}
+                  onChange={(e) => setSlaForm((p) => ({ ...p, startDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label className="text-[12px]">End date <span className="text-red-500">*</span></Label>
+                <Input
+                  type="date"
+                  className="mt-1.5 h-9 text-[13px]"
+                  value={slaForm.endDate}
+                  onChange={(e) => setSlaForm((p) => ({ ...p, endDate: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-[12px]">Notes</Label>
+              <Textarea
+                className="mt-1.5 resize-none text-[13px]"
+                rows={3}
+                value={slaForm.notes}
+                onChange={(e) => setSlaForm((p) => ({ ...p, notes: e.target.value }))}
+                placeholder="Contract scope and support terms..."
+              />
+            </div>
+            {slaFormError && <p className="text-[12px] text-destructive">{slaFormError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setShowCreateSLA(false)}>Cancel</Button>
+            <Button size="sm" onClick={handleCreateSLA}>Create SLA</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { useServiceDesk } from '../store/serviceDeskStore';
+import { useServiceDesk, draftTicketArticle } from '../store/serviceDeskStore';
 import { getTicketSupportType, supportTypeBadgeClass } from '../lib/ticketSupportType';
 
 const avatarColors = ['#7c3aed', '#1d4ed8', '#0891b2', '#059669', '#d97706', '#dc2626'];
@@ -23,7 +23,7 @@ export function KnowledgeBase() {
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const navigate = useNavigate();
-  const { tickets, ticketArticles, getOrCreateTicketArticle, slas } = useServiceDesk();
+  const { tickets, ticketArticles, slas } = useServiceDesk();
 
   const projects = useMemo(
     () => Array.from(new Set(tickets.map((t) => t.project))).sort(),
@@ -50,11 +50,11 @@ export function KnowledgeBase() {
   return (
     <div className="flex h-full flex-col bg-muted/30">
       {/* Header */}
-      <div className="border-b bg-background px-6 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-sidebar border-sidebar-border flex-shrink-0 border-b px-6 py-4">
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-[20px] font-semibold tracking-tight">Knowledge Base</h1>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">Projects → Tickets → Articles</p>
+            <h1 className="text-sidebar-foreground text-[20px] font-semibold tracking-tight">Knowledge Base</h1>
+            <p className="text-sidebar-muted-foreground mt-0.5 text-[13px]">Projects → Tickets → Articles</p>
           </div>
         </div>
 
@@ -163,7 +163,7 @@ export function KnowledgeBase() {
                 </tr>
               )}
               {projectTickets.map((t, idx) => {
-                const article = ticketArticles[t.id] ?? getOrCreateTicketArticle({ ticketId: t.id });
+                const article = ticketArticles[t.id] ?? draftTicketArticle(t);
                 const supportType = getTicketSupportType(slas, t.project);
                 const supportBadge = supportTypeConfig[supportType];
                 return (
@@ -220,7 +220,7 @@ export function KnowledgeBase() {
               </div>
             )}
             {projectTickets.map((t, idx) => {
-              const article = ticketArticles[t.id] ?? getOrCreateTicketArticle({ ticketId: t.id });
+              const article = ticketArticles[t.id] ?? draftTicketArticle(t);
               const supportType = getTicketSupportType(slas, t.project);
               const supportBadge = supportTypeConfig[supportType];
               return (

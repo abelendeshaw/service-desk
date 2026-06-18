@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { toast } from 'sonner';
 import {
   ArrowLeft,
   Mail,
@@ -16,434 +17,542 @@ import {
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react';
+import { Avatar, AvatarFallback } from '../components/ui/avatar';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import { Separator } from '../components/ui/separator';
+import { useServiceDesk } from '../store/serviceDeskStore';
+import { hasClientContact } from '../lib/clientsData';
+import type { TicketPriority } from '../store/types';
 
 const steps = ['Compose', 'Routing', 'Review'];
 
-const clients = [
-  { name: 'EPSS Client', email: 'epss@gmail.com', color: '#7c3aed', initials: 'EP' },
-  { name: 'ESLSE Client', email: 'eslse@gmail.com', color: '#1d4ed8', initials: 'ES' },
-  { name: 'IE Client', email: 'ie@gmail.com', color: '#0891b2', initials: 'IE' },
-  { name: 'EOTC Client', email: 'eotc@gmail.com', color: '#7c3aed', initials: 'EO' },
-  { name: 'ERA/MOTL Client', email: 'eramotl@gmail.com', color: '#059669', initials: 'ER' },
-  { name: 'MinT Client', email: 'mint@gmail.com', color: '#6b7280', initials: 'MI' },
-  { name: 'MoTI Client', email: 'moti@gmail.com', color: '#6366f1', initials: 'MO' },
+const fallbackRecipients = [
+  { name: 'EPSS Client', email: 'epss@gmail.com', initials: 'EP', color: '#7c3aed' },
+  { name: 'IE Client', email: 'ie@gmail.com', initials: 'IE', color: '#7c3aed' },
+  { name: 'MinT Client', email: 'mint@gmail.com', initials: 'MI', color: '#7c3aed' },
+  { name: 'MoTI Client', email: 'moti@gmail.com', initials: 'MT', color: '#7c3aed' },
+  { name: 'ERA/MOTL Client', email: 'eramotl@gmail.com', initials: 'ER', color: '#7c3aed' },
 ];
+
+const teams = ['END Team', 'ICT Field Team', 'CSD Team', 'NOC Team'];
+const priorities: Exclude<TicketPriority, null>[] = ['Critical', 'High', 'Medium', 'Low'];
+const FIELD_ENGINEER_AUTO = '__auto__';
+
+const priorityBadgeClass: Record<string, string> = {
+  Critical: 'bg-red-50 text-red-700 border-red-200',
+  High: 'bg-orange-50 text-orange-700 border-orange-200',
+  Medium: 'bg-amber-50 text-amber-700 border-amber-200',
+  Low: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+};
 
 export function CreateEmailSupport() {
   const navigate = useNavigate();
+  const { clients, engineers } = useServiceDesk();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
     to: '',
     cc: '',
     subject: '',
     body: '',
-    priority: 'Medium',
-    fieldEngineer: '',
+    priority: 'Medium' as Exclude<TicketPriority, null>,
+    fieldEngineer: FIELD_ENGINEER_AUTO,
     team: '',
   });
   const [attachments, setAttachments] = useState<string[]>([]);
 
-  const update = (key: string, val: string) => setForm(prev => ({ ...prev, [key]: val }));
+  const recipients = useMemo(() => {
+    const fromStore = clients
+      .filter((c) => hasClientContact(c) && c.email)
+      .map((c) => ({
+        name: c.name || c.company,
+        email: c.email,
+        initials: c.initials,
+        color: c.color,
+      }));
+    if (fromStore.length > 0) return fromStore;
+    return fallbackRecipients;
+  }, [clients]);
 
-  const fieldClasses = "w-full h-9 px-3 border border-[#e1e4e8] rounded-md text-[13px] text-[#1a1d21] bg-white focus:outline-none focus:ring-2 focus:ring-[#0b2235]/20 focus:border-[#0b2235] transition-all placeholder-[#9ca3af]";
-  const selectClasses = `${fieldClasses} appearance-none`;
-  const labelClasses = "block text-[12px] font-medium text-[#4b5563] mb-1.5";
-
-  const selectedClient = clients.find(c => c.email === form.to);
+  const selectedRecipient = recipients.find((c) => c.email === form.to);
 
   const checklist = [
     { label: 'Recipient selected', done: !!form.to },
-    { label: 'Subject added', done: !!form.subject },
-    { label: 'Message body written', done: form.body.length > 20 },
+    { label: 'Subject added', done: !!form.subject.trim() },
+    { label: 'Message body written', done: form.body.trim().length > 20 },
     { label: 'Priority set', done: !!form.priority },
     { label: 'Team assigned', done: !!form.team },
   ];
 
+  const canContinueStep0 = form.to && form.subject.trim() && form.body.trim().length > 10;
+  const canContinueStep1 = !!form.team;
+
+  const fieldEngineerLabel =
+    form.fieldEngineer === FIELD_ENGINEER_AUTO ? 'Auto-assign' : form.fieldEngineer;
+
+  const handleSend = () => {
+    toast.success('Email sent to client');
+    navigate('/tickets?tab=email');
+  };
+
   return (
-    <div className="min-h-full bg-[#f8f9fa] p-6">
-      <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <button
+    <div className="flex min-h-full flex-col bg-muted/30">
+      <div className="border-sidebar-border flex-shrink-0 border-b bg-sidebar px-6 py-5">
+        <div className="mx-auto flex w-full max-w-6xl items-center gap-3">
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-8 border-violet-400/25 bg-white"
             onClick={() => navigate('/tickets?tab=email')}
-            className="w-8 h-8 flex items-center justify-center text-[#6c757d] hover:text-[#0b2235] hover:bg-white border border-[#e1e4e8] rounded-md transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-          </button>
+          </Button>
           <div>
-            <h1 className="text-[20px] font-semibold text-[#0b2235]">Compose Email</h1>
-            <p className="text-[13px] text-[#6c757d]">Send a new email support message to a client</p>
+            <h1 className="text-sidebar-foreground text-[20px] font-semibold tracking-tight">
+              Compose Email
+            </h1>
+            <p className="text-sidebar-muted-foreground mt-0.5 text-[13px]">
+              Send a support message to a client
+            </p>
           </div>
         </div>
+      </div>
 
-        {/* Steps */}
-        <div className="flex items-center gap-2 mb-6">
-          {steps.map((s, i) => (
-            <div key={s} className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold transition-all ${
-                    i < step ? 'bg-[#059669] text-white' :
-                    i === step ? 'bg-[#0b2235] text-white' :
-                    'bg-[#f1f3f5] text-[#9ca3af]'
-                  }`}
-                >
-                  {i < step ? '✓' : i + 1}
+      <div className="flex-1 p-6">
+        <div className="mx-auto w-full max-w-6xl">
+          <div className="mb-6 flex items-center gap-2">
+            {steps.map((s, i) => (
+              <div key={s} className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`flex size-6 items-center justify-center rounded-full text-[11px] font-semibold transition-all ${
+                      i < step
+                        ? 'bg-emerald-600 text-white'
+                        : i === step
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {i < step ? '✓' : i + 1}
+                  </div>
+                  <span
+                    className={`text-[12px] font-medium ${
+                      i === step ? 'text-foreground' : 'text-muted-foreground'
+                    }`}
+                  >
+                    {s}
+                  </span>
                 </div>
-                <span className={`text-[12px] font-medium ${i === step ? 'text-[#0b2235]' : i < step ? 'text-[#059669]' : 'text-[#9ca3af]'}`}>
-                  {s}
-                </span>
+                {i < steps.length - 1 && (
+                  <div className={`h-px w-12 ${i < step ? 'bg-emerald-500' : 'bg-border'}`} />
+                )}
               </div>
-              {i < steps.length - 1 && (
-                <div className={`h-px w-12 ${i < step ? 'bg-[#059669]' : 'bg-[#e1e4e8]'}`} />
+            ))}
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-4">
+            <div className="flex flex-col gap-4 lg:col-span-3">
+              {step === 0 && (
+                <>
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Mail className="size-4 text-primary" />
+                        Recipients
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label className="mb-1.5 text-[12px]">
+                          To <span className="text-red-500">*</span>
+                        </Label>
+                        <Select value={form.to} onValueChange={(v) => setForm((p) => ({ ...p, to: v }))}>
+                          <SelectTrigger className="h-9 text-[13px]">
+                            <SelectValue placeholder="Select client recipient" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {recipients.map((c) => (
+                              <SelectItem key={c.email} value={c.email}>
+                                {c.name} — {c.email}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {selectedRecipient && (
+                          <div className="mt-2 flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
+                            <Avatar className="size-7">
+                              <AvatarFallback
+                                className="text-[10px] font-semibold text-white"
+                                style={{ backgroundColor: selectedRecipient.color }}
+                              >
+                                {selectedRecipient.initials}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="text-[12px] font-medium">{selectedRecipient.name}</div>
+                              <div className="text-[11px] text-muted-foreground">{selectedRecipient.email}</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 text-[12px]">
+                          CC <span className="font-normal text-muted-foreground">(optional)</span>
+                        </Label>
+                        <Input
+                          value={form.cc}
+                          onChange={(e) => setForm((p) => ({ ...p, cc: e.target.value }))}
+                          placeholder="cc@company.com"
+                          className="h-9 text-[13px]"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Mail className="size-4 text-primary" />
+                        Message
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label className="mb-1.5 text-[12px]">
+                          Subject <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          value={form.subject}
+                          onChange={(e) => setForm((p) => ({ ...p, subject: e.target.value }))}
+                          placeholder="Brief description of the issue or request"
+                          className="h-9 text-[13px]"
+                        />
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 text-[12px]">Priority</Label>
+                        <div className="flex items-center gap-2">
+                          {priorities.map((p) => (
+                            <Button
+                              key={p}
+                              type="button"
+                              variant={form.priority === p ? 'default' : 'outline'}
+                              size="sm"
+                              className={`h-8 flex-1 text-[12px] ${
+                                form.priority === p ? '' : 'text-muted-foreground'
+                              }`}
+                              onClick={() => setForm((prev) => ({ ...prev, priority: p }))}
+                            >
+                              {p}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 text-[12px]">
+                          Body <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="overflow-hidden rounded-md border">
+                          <div className="flex items-center gap-0.5 border-b bg-muted/50 px-2 py-1.5">
+                            {[Bold, Italic, Link, List].map((Icon, idx) => (
+                              <Button
+                                key={idx}
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 text-muted-foreground"
+                              >
+                                <Icon className="size-3.5" />
+                              </Button>
+                            ))}
+                            <Separator orientation="vertical" className="mx-1 h-4" />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 gap-1 px-2 text-[11px] text-muted-foreground"
+                              onClick={() =>
+                                setAttachments((prev) => [...prev, `attachment-${prev.length + 1}.pdf`])
+                              }
+                            >
+                              <Paperclip className="size-3" />
+                              Attach
+                            </Button>
+                          </div>
+                          <Textarea
+                            value={form.body}
+                            onChange={(e) => setForm((p) => ({ ...p, body: e.target.value }))}
+                            placeholder="Write your message here. Include relevant details such as error messages, affected systems, and urgency level..."
+                            rows={8}
+                            className="resize-none rounded-none border-0 text-[13px] focus-visible:ring-0"
+                          />
+                        </div>
+                      </div>
+                      {attachments.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {attachments.map((att, i) => (
+                            <div
+                              key={att}
+                              className="flex items-center gap-1.5 rounded-md border bg-muted/40 px-2.5 py-1.5"
+                            >
+                              <Paperclip className="size-3 text-muted-foreground" />
+                              <span className="text-[12px]">{att}</span>
+                              <button
+                                type="button"
+                                onClick={() => setAttachments((prev) => prev.filter((_, j) => j !== i))}
+                              >
+                                <X className="size-3 text-muted-foreground hover:text-foreground" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {step === 1 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Users className="size-4 text-primary" />
+                      Routing & Assignment
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label className="mb-1.5 text-[12px]">
+                        Assign Team <span className="text-red-500">*</span>
+                      </Label>
+                      <Select value={form.team} onValueChange={(v) => setForm((p) => ({ ...p, team: v }))}>
+                        <SelectTrigger className="h-9 text-[13px]">
+                          <SelectValue placeholder="Select team" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {teams.map((t) => (
+                            <SelectItem key={t} value={t}>{t}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="mb-1.5 text-[12px]">
+                        Assign Field Engineer{' '}
+                        <span className="font-normal text-muted-foreground">(optional)</span>
+                      </Label>
+                      <Select
+                        value={form.fieldEngineer}
+                        onValueChange={(v) => setForm((p) => ({ ...p, fieldEngineer: v }))}
+                      >
+                        <SelectTrigger className="h-9 text-[13px]">
+                          <SelectValue placeholder="Auto-assign based on availability" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={FIELD_ENGINEER_AUTO}>
+                            Auto-assign based on availability
+                          </SelectItem>
+                          {engineers.map((e) => (
+                            <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="rounded-md border bg-muted/40 p-3">
+                      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Routing Preview
+                      </div>
+                      <div className="space-y-1 text-[12px]">
+                        {[
+                          { label: 'To', value: form.to || '—' },
+                          { label: 'Team', value: form.team || 'Not assigned' },
+                          { label: 'Field Engineer', value: fieldEngineerLabel },
+                          { label: 'Priority', value: form.priority },
+                        ].map(({ label, value }) => (
+                          <div key={label} className="flex gap-2">
+                            <span className="w-24 text-muted-foreground">{label}</span>
+                            <span className="font-medium">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {step === 2 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Review & Send</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="overflow-hidden rounded-md border">
+                      <div className="border-b bg-muted/40 px-4 py-3">
+                        <div className="space-y-1 text-[12px]">
+                          <div className="flex gap-2">
+                            <span className="w-14 text-muted-foreground">From:</span>
+                            <span className="font-medium">support@ienetworks.co</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="w-14 text-muted-foreground">To:</span>
+                            <span className="font-medium">{form.to || '—'}</span>
+                          </div>
+                          {form.cc && (
+                            <div className="flex gap-2">
+                              <span className="w-14 text-muted-foreground">CC:</span>
+                              <span className="font-medium">{form.cc}</span>
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <span className="w-14 text-muted-foreground">Subject:</span>
+                            <span className="font-medium">{form.subject || '—'}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        {form.body ? (
+                          <pre className="whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-muted-foreground">
+                            {form.body}
+                          </pre>
+                        ) : (
+                          <p className="text-[13px] italic text-muted-foreground">No message body</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="divide-y rounded-md border">
+                      {[
+                        { label: 'Team', value: form.team || '—' },
+                        { label: 'Field Engineer', value: fieldEngineerLabel },
+                        { label: 'Priority', value: form.priority },
+                      ].map(({ label, value }) => (
+                        <div key={label} className="flex gap-4 px-4 py-2.5">
+                          <div className="w-28 shrink-0 text-[12px] text-muted-foreground">{label}</div>
+                          <div className="text-[13px] font-medium">{value}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <Alert className="border-primary/20 bg-primary/5">
+                      <AlertCircle className="size-4 text-primary" />
+                      <AlertTitle className="text-[13px] text-foreground">Ready to send</AlertTitle>
+                      <AlertDescription className="text-[12px]">
+                        This email will be sent from{' '}
+                        <span className="font-medium">support@ienetworks.co</span> and logged in Email
+                        Support.
+                      </AlertDescription>
+                    </Alert>
+                  </CardContent>
+                </Card>
               )}
             </div>
-          ))}
-        </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          {/* Form */}
-          <div className="col-span-2 space-y-4">
-            {step === 0 && (
-              <>
-                {/* Recipients */}
-                <div className="bg-white border border-[#e1e4e8] rounded-lg p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Mail className="w-4 h-4 text-[#9ca3af]" />
-                    <h3 className="text-[14px] font-semibold text-[#0b2235]">Recipients</h3>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className={labelClasses}>To <span className="text-red-500">*</span></label>
-                      <select
-                        value={form.to}
-                        onChange={e => update('to', e.target.value)}
-                        className={selectClasses}
+            <div className="space-y-4">
+              <Alert className="border-violet-200 bg-violet-50 dark:border-violet-400/25 dark:bg-violet-500/10">
+                <Info className="size-4 text-primary" />
+                <AlertTitle className="text-[13px] text-foreground">Email guidelines</AlertTitle>
+                <AlertDescription>
+                  <ul className="mt-1 space-y-1 text-[12px] leading-relaxed">
+                    <li>Use clear, professional subject lines</li>
+                    <li>Reference ticket IDs when applicable</li>
+                    <li>Set appropriate priority levels</li>
+                    <li>Assign to the correct team</li>
+                    <li>All emails are tracked and logged</li>
+                  </ul>
+                </AlertDescription>
+              </Alert>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Checklist
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {checklist.map(({ label, done }) => (
+                    <div key={label} className="flex items-center gap-2">
+                      <div
+                        className={`flex size-4 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
+                          done ? 'border-emerald-600 bg-emerald-600' : 'border-muted-foreground/30'
+                        }`}
                       >
-                        <option value="">Select client recipient</option>
-                        {clients.map(c => (
-                          <option key={c.email} value={c.email}>
-                            {c.name} — {c.email}
-                          </option>
-                        ))}
-                      </select>
-                      {selectedClient && (
-                        <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-[#f8f9fa] rounded-md border border-[#e1e4e8]">
-                          <div
-                            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-semibold flex-shrink-0"
-                            style={{ backgroundColor: selectedClient.color }}
-                          >
-                            {selectedClient.initials}
-                          </div>
-                          <div className="text-[12px] text-[#1a1d21] font-medium">{selectedClient.name}</div>
-                          <div className="text-[12px] text-[#9ca3af]">{selectedClient.email}</div>
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <label className={labelClasses}>CC <span className="text-[#9ca3af] font-normal">(optional)</span></label>
-                      <input
-                        value={form.cc}
-                        onChange={e => update('cc', e.target.value)}
-                        placeholder="cc@company.com"
-                        className={fieldClasses}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Subject & Body */}
-                <div className="bg-white border border-[#e1e4e8] rounded-lg p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Mail className="w-4 h-4 text-[#9ca3af]" />
-                    <h3 className="text-[14px] font-semibold text-[#0b2235]">Message</h3>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className={labelClasses}>Subject <span className="text-red-500">*</span></label>
-                      <input
-                        value={form.subject}
-                        onChange={e => update('subject', e.target.value)}
-                        placeholder="Brief description of the issue or request"
-                        className={fieldClasses}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClasses}>Priority</label>
-                      <div className="flex items-center gap-2">
-                        {['Critical', 'High', 'Medium', 'Low'].map(p => (
-                          <button
-                            key={p}
-                            onClick={() => update('priority', p)}
-                            className={`flex-1 h-8 rounded-md text-[12px] font-medium border transition-all ${
-                              form.priority === p
-                                ? p === 'Critical' ? 'bg-red-50 border-red-200 text-red-600'
-                                  : p === 'High' ? 'bg-orange-50 border-orange-200 text-orange-600'
-                                  : p === 'Medium' ? 'bg-amber-50 border-amber-200 text-amber-600'
-                                  : 'bg-green-50 border-green-200 text-green-600'
-                                : 'bg-white border-[#e1e4e8] text-[#9ca3af] hover:border-[#0b2235] hover:text-[#4b5563]'
-                            }`}
-                          >
-                            {p}
-                          </button>
-                        ))}
+                        {done && <CheckCircle2 className="size-2.5 text-white" />}
                       </div>
-                    </div>
-                    <div>
-                      <label className={labelClasses}>Body <span className="text-red-500">*</span></label>
-                      {/* Formatting Toolbar */}
-                      <div className="flex items-center gap-0.5 px-2 py-1.5 border border-[#e1e4e8] rounded-t-md bg-[#f8f9fa] border-b-0">
-                        {[
-                          { Icon: Bold, label: 'Bold' },
-                          { Icon: Italic, label: 'Italic' },
-                          { Icon: Link, label: 'Link' },
-                          { Icon: List, label: 'List' },
-                        ].map(({ Icon, label }) => (
-                          <button
-                            key={label}
-                            title={label}
-                            className="w-7 h-7 flex items-center justify-center text-[#9ca3af] hover:text-[#4b5563] hover:bg-white rounded transition-colors"
-                          >
-                            <Icon className="w-3.5 h-3.5" />
-                          </button>
-                        ))}
-                        <div className="w-px h-4 bg-[#e1e4e8] mx-1" />
-                        <button className="flex items-center gap-1 px-2 h-6 text-[11px] text-[#9ca3af] hover:text-[#4b5563] hover:bg-white rounded transition-colors">
-                          <Paperclip className="w-3 h-3" />
-                          Attach
-                        </button>
-                      </div>
-                      <textarea
-                        value={form.body}
-                        onChange={e => update('body', e.target.value)}
-                        placeholder="Write your message here. Include relevant details such as error messages, affected systems, and urgency level..."
-                        rows={8}
-                        className="w-full px-3 py-2.5 border border-[#e1e4e8] rounded-b-md text-[13px] text-[#1a1d21] bg-white focus:outline-none focus:ring-2 focus:ring-[#0b2235]/20 focus:border-[#0b2235] resize-none placeholder-[#9ca3af]"
-                      />
-                    </div>
-
-                    {/* Attachments */}
-                    {attachments.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {attachments.map((att, i) => (
-                          <div key={i} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#f8f9fa] border border-[#e1e4e8] rounded-md">
-                            <Paperclip className="w-3 h-3 text-[#9ca3af]" />
-                            <span className="text-[12px] text-[#4b5563]">{att}</span>
-                            <button onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))}>
-                              <X className="w-3 h-3 text-[#9ca3af] hover:text-[#6c757d]" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {step === 1 && (
-              <div className="bg-white border border-[#e1e4e8] rounded-lg p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <Users className="w-4 h-4 text-[#9ca3af]" />
-                  <h3 className="text-[14px] font-semibold text-[#0b2235]">Routing & Assignment</h3>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className={labelClasses}>Assign Team <span className="text-red-500">*</span></label>
-                    <select value={form.team} onChange={e => update('team', e.target.value)} className={selectClasses}>
-                      <option value="">Select team</option>
-                      <option>END Team</option>
-                      <option>ICT Field Team</option>
-                      <option>CSD Team</option>
-                      <option>NOC Team</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelClasses}>Assign Field Engineer <span className="text-[#9ca3af] font-normal">(optional)</span></label>
-                    <select value={form.fieldEngineer} onChange={e => update('fieldEngineer', e.target.value)} className={selectClasses}>
-                      <option value="">Auto-assign based on availability</option>
-                      <option>Wongel Wondyifraw</option>
-                      <option>Sisay Shiferaw</option>
-                      <option>Masresha Melese</option>
-                      <option>Dawit Bekele</option>
-                      <option>Mebrate Degu</option>
-                    </select>
-                  </div>
-
-                  <div className="p-3 bg-[#f8f9fa] rounded-md border border-[#e1e4e8]">
-                    <div className="text-[11px] font-semibold text-[#4b5563] mb-2">Routing Preview</div>
-                    <div className="text-[12px] text-[#6c757d] space-y-1">
-                      <div className="flex gap-2">
-                        <span className="text-[#9ca3af] w-20">To:</span>
-                        <span className="font-medium text-[#1a1d21]">{form.to || '—'}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="text-[#9ca3af] w-20">Team:</span>
-                        <span className="font-medium text-[#1a1d21]">{form.team || 'Not assigned'}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="text-[#9ca3af] w-20">Field Engineer:</span>
-                        <span className="font-medium text-[#1a1d21]">{form.fieldEngineer || 'Auto-assign'}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="text-[#9ca3af] w-20">Priority:</span>
-                        <span className="font-medium text-[#1a1d21]">{form.priority}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {step === 2 && (
-              <div className="bg-white border border-[#e1e4e8] rounded-lg p-5">
-                <h3 className="text-[14px] font-semibold text-[#0b2235] mb-4">Review & Send</h3>
-
-                {/* Email Preview */}
-                <div className="border border-[#e1e4e8] rounded-md overflow-hidden mb-4">
-                  <div className="bg-[#f8f9fa] px-4 py-3 border-b border-[#e1e4e8]">
-                    <div className="text-[12px] text-[#4b5563] space-y-1">
-                      <div className="flex gap-2">
-                        <span className="text-[#9ca3af] w-14">From:</span>
-                        <span className="font-medium">support@ienetworks.co</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="text-[#9ca3af] w-14">To:</span>
-                        <span className="font-medium">{form.to || '—'}</span>
-                      </div>
-                      {form.cc && (
-                        <div className="flex gap-2">
-                          <span className="text-[#9ca3af] w-14">CC:</span>
-                          <span className="font-medium">{form.cc}</span>
-                        </div>
-                      )}
-                      <div className="flex gap-2">
-                        <span className="text-[#9ca3af] w-14">Subject:</span>
-                        <span className="font-medium">{form.subject || '—'}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    {form.body ? (
-                      <pre className="text-[13px] text-[#4b5563] leading-relaxed font-sans whitespace-pre-wrap">{form.body}</pre>
-                    ) : (
-                      <div className="text-[13px] text-[#9ca3af] italic">No message body</div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-0">
-                  {[
-                    { label: 'Team', value: form.team || '—' },
-                    { label: 'Field Engineer', value: form.fieldEngineer || 'Auto-assign' },
-                    { label: 'Priority', value: form.priority },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="flex items-center gap-4 py-2.5 border-b border-[#f8f9fa] last:border-0">
-                      <div className="text-[12px] text-[#9ca3af] w-24 flex-shrink-0">{label}</div>
-                      <div className="text-[13px] font-medium text-[#1a1d21]">{value}</div>
+                      <span className={`text-[12px] ${done ? 'text-emerald-700' : 'text-muted-foreground'}`}>
+                        {label}
+                      </span>
                     </div>
                   ))}
-                </div>
+                </CardContent>
+              </Card>
 
-                <div className="mt-4 flex items-start gap-2.5 p-3 bg-[#eff6ff] border border-[#bfdbfe] rounded-md">
-                  <AlertCircle className="w-4 h-4 text-[#2563eb] flex-shrink-0 mt-0.5" />
-                  <p className="text-[12px] text-[#3b82f6]">
-                    This email will be sent from <span className="font-medium">support@ienetworks.co</span> and tracked as EM-{String(Date.now()).slice(-3)}.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-4">
-            <div className="bg-[#eff6ff] border border-[#bfdbfe] rounded-lg p-4">
-              <div className="flex items-start gap-2.5">
-                <Info className="w-4 h-4 text-[#2563eb] flex-shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-[12px] font-semibold text-[#1d4ed8] mb-1.5">Email Guidelines</div>
-                  <ul className="text-[12px] text-[#3b82f6] space-y-1 leading-relaxed">
-                    <li>• Use clear, professional subject lines</li>
-                    <li>• Reference ticket IDs when applicable</li>
-                    <li>• Set appropriate priority levels</li>
-                    <li>• Assign to the correct team</li>
-                    <li>• All emails are tracked and logged</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white border border-[#e1e4e8] rounded-lg p-4">
-              <div className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-3">Checklist</div>
-              <div className="space-y-2">
-                {checklist.map(({ label, done }) => (
-                  <div key={label} className="flex items-center gap-2">
-                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${done ? 'border-[#059669] bg-[#059669]' : 'border-[#d1d5db]'}`}>
-                      {done && <CheckCircle2 className="w-2.5 h-2.5 text-white" />}
-                    </div>
-                    <span className={`text-[12px] ${done ? 'text-[#059669]' : 'text-[#9ca3af]'}`}>{label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {form.subject && (
-              <div className="bg-white border border-[#e1e4e8] rounded-lg p-4">
-                <div className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-3">Preview</div>
-                <div className="space-y-2">
-                  <div className="text-[13px] font-medium text-[#0b2235] leading-snug">{form.subject}</div>
-                  {selectedClient && (
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-semibold"
-                        style={{ backgroundColor: selectedClient.color }}
-                      >
-                        {selectedClient.initials}
+              {form.subject && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Preview
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="text-[13px] font-medium leading-snug">{form.subject}</div>
+                    {selectedRecipient && (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="size-5">
+                          <AvatarFallback
+                            className="text-[9px] font-semibold text-white"
+                            style={{ backgroundColor: selectedRecipient.color }}
+                          >
+                            {selectedRecipient.initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-[12px] text-muted-foreground">{selectedRecipient.name}</span>
                       </div>
-                      <span className="text-[12px] text-[#6c757d]">{selectedClient.name}</span>
-                    </div>
-                  )}
-                  {form.priority && (
-                    <span className={`inline-block px-2 py-0.5 text-[11px] rounded-md font-medium ${
-                      form.priority === 'Critical' ? 'bg-red-50 text-red-600' :
-                      form.priority === 'High' ? 'bg-orange-50 text-orange-600' :
-                      form.priority === 'Medium' ? 'bg-amber-50 text-amber-600' :
-                      'bg-green-50 text-green-600'
-                    }`}>
-                      {form.priority}
-                    </span>
-                  )}
-                </div>
-              </div>
+                    )}
+                    {form.priority && (
+                      <Badge variant="outline" className={`text-[11px] ${priorityBadgeClass[form.priority]}`}>
+                        {form.priority}
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6 flex items-center justify-between border-t pt-5">
+            <Button
+              variant="outline"
+              onClick={() => (step > 0 ? setStep((s) => s - 1) : navigate('/tickets?tab=email'))}
+            >
+              {step === 0 ? 'Cancel' : 'Back'}
+            </Button>
+
+            {step < steps.length - 1 ? (
+              <Button
+                className="gap-1.5"
+                disabled={step === 0 ? !canContinueStep0 : !canContinueStep1}
+                onClick={() => setStep((s) => s + 1)}
+              >
+                Continue <ChevronRight className="size-3.5" />
+              </Button>
+            ) : (
+              <Button className="gap-1.5" onClick={handleSend}>
+                <Send className="size-3.5" />
+                Send Email
+              </Button>
             )}
           </div>
-        </div>
-
-        {/* Navigation */}
-        <div className="flex items-center justify-between mt-6 pt-5 border-t border-[#e1e4e8]">
-          <button
-            onClick={() => step > 0 ? setStep(s => s - 1) : navigate('/tickets?tab=email')}
-            className="flex items-center gap-1.5 h-9 px-4 text-[13px] font-medium text-[#6c757d] border border-[#e1e4e8] rounded-md bg-white hover:border-[#0b2235] hover:text-[#0b2235] transition-colors"
-          >
-            {step === 0 ? 'Cancel' : 'Back'}
-          </button>
-
-          {step < steps.length - 1 ? (
-            <button
-              onClick={() => setStep(s => s + 1)}
-              className="flex items-center gap-1.5 h-9 px-4 text-[13px] font-medium text-white bg-[#0b2235] rounded-md hover:bg-[#0f2d45] transition-colors"
-            >
-              Continue <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          ) : (
-            <button
-              onClick={() => navigate('/tickets?tab=email')}
-              className="flex items-center gap-1.5 h-9 px-4 text-[13px] font-medium text-white bg-[#059669] rounded-md hover:bg-[#047857] transition-colors"
-            >
-              <Send className="w-3.5 h-3.5" />
-              Send Email
-            </button>
-          )}
         </div>
       </div>
     </div>

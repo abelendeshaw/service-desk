@@ -82,7 +82,12 @@ export type Ticket = {
   id: string;
   createdAt: string;
   updatedAt: string;
+  /** Client company code */
   project: string;
+  /** SLA project name */
+  projectName: string;
+  slaId: string | null;
+  category: string | null;
   contactName: string;
   supportType: string;
   subject: string;
@@ -104,6 +109,8 @@ export type Ticket = {
     initials: string;
     role: Role;
   };
+  /** Set when client confirms resolution */
+  resolutionConfirmedAt?: string | null;
 };
 
 export type EmailStatus = "Open" | "Pending" | "Closed";

@@ -11,7 +11,7 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Separator } from '../components/ui/separator';
-import { useServiceDesk } from '../store/serviceDeskStore';
+import { useServiceDesk, draftTicketArticle } from '../store/serviceDeskStore';
 import { getKnowledgeBasePaths } from '../lib/portalPaths';
 
 // Sample article data — in production this would come from an API
@@ -172,10 +172,12 @@ export function ArticleDetail() {
   const paths = getKnowledgeBasePaths(location.pathname);
   const { ticketId } = useParams<{ ticketId: string }>();
   const [showMore, setShowMore] = useState(false);
-  const { tickets, ticketArticles, getOrCreateTicketArticle } = useServiceDesk();
+  const { tickets, ticketArticles } = useServiceDesk();
 
   const ticket = tickets.find((t) => t.id === ticketId);
-  const kb = ticketId ? (ticketArticles[ticketId] ?? getOrCreateTicketArticle({ ticketId })) : null;
+  const kb = ticketId && ticket
+    ? (ticketArticles[ticketId] ?? draftTicketArticle(ticket))
+    : null;
 
   const data = kb
     ? {
@@ -197,18 +199,18 @@ export function ArticleDetail() {
     <div className="min-h-full bg-muted/30 flex flex-col">
 
       {/* Breadcrumb / Top Nav */}
-      <div className="bg-background border-b px-6 h-[44px] flex items-center gap-2 flex-shrink-0">
+      <div className="bg-sidebar border-sidebar-border flex h-[44px] flex-shrink-0 items-center gap-2 border-b px-6">
         <Button
           onClick={() => navigate(paths.knowledgeRoot)}
           variant="ghost"
           size="sm"
-          className="h-auto gap-1.5 p-0 text-[12px]"
+          className="text-sidebar-muted-foreground hover:text-sidebar-foreground h-auto gap-1.5 p-0 text-[12px]"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to Knowledge Base
         </Button>
-        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-        <span className="text-[12px] text-muted-foreground truncate max-w-xs">{data?.title ?? `Ticket #${ticketId}`}</span>
+        <ChevronRight className="text-sidebar-muted-foreground w-3.5 h-3.5" />
+        <span className="text-sidebar-muted-foreground max-w-xs truncate text-[12px]">{data?.title ?? `Ticket #${ticketId}`}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -233,41 +235,41 @@ export function ArticleDetail() {
         ) : (
         <div className="flex flex-col">
         {/* Hero Header */}
-      <div className="bg-primary px-6 py-7">
+      <div className="bg-sidebar border-sidebar-border border-b px-6 py-7">
           <div className="max-w-4xl mx-auto">
             {/* Meta row */}
-            <div className="flex items-center gap-3 mb-4">
-              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-medium bg-white/10 text-white/80 border border-white/10">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="text-sidebar-foreground inline-flex items-center rounded-md border border-violet-400/25 bg-white/70 px-2.5 py-1 text-[11px] font-medium">
                 Project: {data.category} · Ticket: #{ticket.id}
               </span>
-              <div className="flex items-center gap-1 text-white/50 text-[12px]">
+              <div className="text-sidebar-muted-foreground flex items-center gap-1 text-[12px]">
                 <Eye className="w-3.5 h-3.5" />
                 {data.views} views
               </div>
-              <div className="flex items-center gap-1 text-white/50 text-[12px]">
+              <div className="text-sidebar-muted-foreground flex items-center gap-1 text-[12px]">
                 <Clock className="w-3.5 h-3.5" />
                 {data.readTime}
               </div>
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold ${data.status === 'Published' ? 'bg-emerald-500/20 text-emerald-200' : 'bg-white/10 text-white/60'}`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${data.status === 'Published' ? 'bg-emerald-400' : 'bg-white/30'}`} />
+              <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-semibold ${data.status === 'Published' ? 'bg-emerald-100 text-emerald-700' : 'bg-white/70 text-sidebar-muted-foreground'}`}>
+                <div className={`h-1.5 w-1.5 rounded-full ${data.status === 'Published' ? 'bg-emerald-500' : 'bg-sidebar-muted-foreground'}`} />
                 {data.status}
               </span>
             </div>
 
             {/* Title */}
-            <h1 className="text-[28px] font-semibold text-white leading-tight mb-5 max-w-3xl">
+            <h1 className="text-sidebar-foreground mb-5 max-w-3xl text-[28px] font-semibold leading-tight">
               {data.title}
             </h1>
 
             {/* Author row */}
-            <div className="flex items-center gap-5 text-[12px] text-white/50">
+            <div className="text-sidebar-muted-foreground flex items-center gap-5 text-[12px]">
               <div className="flex items-center gap-2">
                 <Avatar className="size-6">
                   <AvatarFallback className="text-[10px] font-semibold text-white" style={{ backgroundColor: data.authorColor }}>
                     {data.authorInitials}
                   </AvatarFallback>
                 </Avatar>
-                <span className="text-white/70">{data.author}</span>
+                <span className="text-sidebar-foreground">{data.author}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5" />

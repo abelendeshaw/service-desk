@@ -1,6 +1,7 @@
 import React from "react";
 import { toast } from "sonner";
 import { buildClientFromPM, getPMCompany, seedServiceDeskClients, type ClientContactInput, type ServiceDeskClient } from "../lib/clientsData";
+import { enrichTicket } from "../lib/ticketProjects";
 import { seedClientArticles, seedEmailThreads, seedEngineers, seedNotifications, seedSLAs, seedTickets } from "./seed";
 import type {
   Attachment,
@@ -32,6 +33,9 @@ type State = {
 type Actions = {
   createTicket(input: {
     project: string;
+    projectName?: string;
+    slaId?: string | null;
+    category?: string | null;
     contactName: string;
     supportType: string;
     subject: string;
@@ -68,7 +72,19 @@ type Actions = {
   markNotificationsRead(): void;
   markNotificationRead(id: string): void;
   dismissNotification(id: string): void;
-  convertEmailToTicket(input: { emailId: string; project: string; supportType: string }): string;
+  convertEmailToTicket(input: {
+    emailId: string;
+    project: string;
+    projectName: string;
+    slaId?: string | null;
+    subject: string;
+    description: string;
+    priority: TicketPriority;
+    category: string | null;
+    supportType: string;
+  }): string;
+  confirmTicketResolution(input: { ticketId: string; author: { name: string; initials: string } }): void;
+  rejectTicketResolution(input: { ticketId: string; reason: string; author: { name: string; initials: string } }): void;
   addInboundEmail(input: {
     fromName: string;
     fromEmail: string;
@@ -136,7 +152,7 @@ function canTransition(from: TicketStatus, to: TicketStatus) {
   return allowed[from].includes(to);
 }
 
-function normalizeTicket(ticket: Ticket & { createdBy?: Ticket["createdBy"] }): Ticket {
+function normalizeTicket(ticket: Ticket & { createdBy?: Ticket["createdBy"] }, slas: SLA[] = seedSLAs): Ticket {
   const assignedEngineerIds =
     Array.isArray(ticket.assignedEngineerIds) && ticket.assignedEngineerIds.length > 0
       ? ticket.assignedEngineerIds
@@ -151,7 +167,7 @@ function normalizeTicket(ticket: Ticket & { createdBy?: Ticket["createdBy"] }): 
       initials: initials(ticket.contactName),
       role: "Client Contact",
     } satisfies Ticket["createdBy"]);
-  return { ...ticket, assignedEngineerIds, createdBy };
+  return enrichTicket({ ...ticket, assignedEngineerIds, createdBy }, slas);
 }
 
 function loadInitialState(): State {
@@ -160,7 +176,9 @@ function loadInitialState(): State {
     if (!raw) throw new Error("no-store");
     const parsed = JSON.parse(raw) as State;
     if (!parsed?.tickets || !parsed?.emailThreads || !parsed?.engineers) throw new Error("invalid-store");
-    const normalizedTickets = parsed.tickets.map((ticket) => normalizeTicket(ticket as Ticket));
+    const normalizedTickets = parsed.tickets.map((ticket) =>
+      normalizeTicket(ticket as Ticket, (parsed as State).slas ?? seedSLAs),
+    );
     return {
       engineers: parsed.engineers,
       tickets: normalizedTickets,
@@ -203,17 +221,53 @@ function persistState(state: State) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-const ServiceDeskContext = React.createContext<Store | null>(null);
+export function draftTicketArticle(ticket: Ticket): TicketArticle {
+  return {
+    ticketId: ticket.id,
+    project: ticket.project,
+    title: ticket.subject,
+    content: ticket.description,
+    status: "Draft",
+    createdAt: ticket.createdAt,
+    updatedAt: ticket.updatedAt,
+  };
+}
+
+const MAX_NOTIFICATIONS = 100;
+const PERSIST_DEBOUNCE_MS = 300;
+
+const ServiceDeskStateContext = React.createContext<State | null>(null);
+const ServiceDeskActionsContext = React.createContext<Actions | null>(null);
+
+type NotificationsValue = {
+  notifications: Notification[];
+  markNotificationsRead: Actions["markNotificationsRead"];
+  markNotificationRead: Actions["markNotificationRead"];
+  dismissNotification: Actions["dismissNotification"];
+};
+
+const NotificationsContext = React.createContext<NotificationsValue | null>(null);
 
 export function ServiceDeskProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = React.useState<State>(() => loadInitialState());
+  const stateRef = React.useRef(state);
+  stateRef.current = state;
 
   const setAndPersist = React.useCallback((updater: (prev: State) => State) => {
-    setState((prev) => {
-      const next = updater(prev);
-      persistState(next);
-      return next;
-    });
+    setState(updater);
+  }, []);
+
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => {
+      persistState(state);
+    }, PERSIST_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [state]);
+
+  React.useEffect(() => {
+    const flush = () => persistState(stateRef.current);
+    window.addEventListener("beforeunload", flush);
+    return () => window.removeEventListener("beforeunload", flush);
   }, []);
 
   const notify = React.useCallback(
@@ -222,7 +276,7 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
       const createdAt = new Date().toISOString();
       setAndPersist((prev) => ({
         ...prev,
-        notifications: [{ ...n, id, createdAt }, ...prev.notifications],
+        notifications: [{ ...n, id, createdAt }, ...prev.notifications].slice(0, MAX_NOTIFICATIONS),
       }));
     },
     [setAndPersist],
@@ -242,43 +296,47 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
             initials: initials(input.contactName),
             role: "Client Contact",
           } satisfies Ticket["createdBy"]);
-        const newTicket: Ticket = {
-          id,
-          createdAt: now,
-          updatedAt: now,
-          project: input.project,
-          contactName: input.contactName,
-          supportType: input.supportType,
-          subject: input.subject,
-          description: input.description,
-          status: "Open",
-          priority: input.priority,
-          resolutionDueDate: input.resolutionDueDate,
-          assignedEngineerIds: input.initialAssignmentEngineerId ? [input.initialAssignmentEngineerId] : [],
-          assignedEngineerId: input.initialAssignmentEngineerId,
-          assignedAt,
-          escalation: null,
-          issues: input.issues.map((iss) => ({
-            id: uid("iss"),
-            title: iss.title,
-            description: iss.description,
-            attachments: iss.attachments,
-          })),
-          comments: [],
-          activity: [
-            {
-              id: uid("act"),
-              type: "created",
-              createdAt: now,
-              author: createdBy,
-              detail: input.description,
-            },
-          ],
-          source: { type: "manual" },
-          createdBy,
-        };
 
         setAndPersist((prev) => {
+          const newTicket = enrichTicket({
+            id,
+            createdAt: now,
+            updatedAt: now,
+            project: input.project,
+            projectName: input.projectName ?? input.project,
+            slaId: input.slaId ?? null,
+            category: input.category ?? null,
+            contactName: input.contactName,
+            supportType: input.supportType,
+            subject: input.subject,
+            description: input.description,
+            status: "Open",
+            priority: input.priority,
+            resolutionDueDate: input.resolutionDueDate,
+            assignedEngineerIds: input.initialAssignmentEngineerId ? [input.initialAssignmentEngineerId] : [],
+            assignedEngineerId: input.initialAssignmentEngineerId,
+            assignedAt,
+            escalation: null,
+            issues: input.issues.map((iss) => ({
+              id: uid("iss"),
+              title: iss.title,
+              description: iss.description,
+              attachments: iss.attachments,
+            })),
+            comments: [],
+            activity: [
+              {
+                id: uid("act"),
+                type: "created",
+                createdAt: now,
+                author: createdBy,
+                detail: input.description,
+              },
+            ],
+            source: { type: "manual" },
+            createdBy,
+          }, prev.slas);
+
           const nextTicket = { ...newTicket };
           if (input.initialAssignmentEngineerId) {
             const eng = prev.engineers.find((e) => e.id === input.initialAssignmentEngineerId);
@@ -523,6 +581,88 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
         toast.success(internal ? "Internal note added" : "Comment sent");
       },
 
+      confirmTicketResolution: ({ ticketId, author }) => {
+        setAndPersist((prev) => {
+          const t = prev.tickets.find((x) => x.id === ticketId);
+          if (!t || t.status !== "Resolved") return prev;
+          const now = new Date().toISOString();
+          const updated: Ticket = {
+            ...t,
+            status: "Closed",
+            resolutionConfirmedAt: now,
+            updatedAt: now,
+            activity: [
+              {
+                id: uid("act"),
+                type: "status",
+                createdAt: now,
+                author: { name: author.name, initials: author.initials, role: "Client Contact" },
+                from: "Resolved",
+                to: "Closed",
+                reason: "Client confirmed resolution",
+              },
+              ...t.activity,
+            ],
+          };
+          notify({
+            title: `Ticket #${t.id} closed`,
+            detail: "Client confirmed resolution",
+            href: `/tickets/${t.id}`,
+            unread: true,
+            kind: "status",
+          });
+          return { ...prev, tickets: prev.tickets.map((x) => (x.id === ticketId ? updated : x)) };
+        });
+        toast.success("Resolution confirmed — ticket closed");
+      },
+
+      rejectTicketResolution: ({ ticketId, reason, author }) => {
+        setAndPersist((prev) => {
+          const t = prev.tickets.find((x) => x.id === ticketId);
+          if (!t || t.status !== "Resolved") return prev;
+          const now = new Date().toISOString();
+          const commentId = uid("cmt");
+          const updated: Ticket = {
+            ...t,
+            status: "In Progress",
+            updatedAt: now,
+            comments: [
+              {
+                id: commentId,
+                createdAt: now,
+                author: { name: author.name, initials: author.initials, role: "Client Contact" },
+                body: reason,
+                internal: false,
+                attachments: [],
+              },
+              ...t.comments,
+            ],
+            activity: [
+              { id: uid("act"), type: "comment", createdAt: now, commentId },
+              {
+                id: uid("act"),
+                type: "status",
+                createdAt: now,
+                author: { name: author.name, initials: author.initials, role: "Client Contact" },
+                from: "Resolved",
+                to: "In Progress",
+                reason: "Client rejected resolution",
+              },
+              ...t.activity,
+            ],
+          };
+          notify({
+            title: `Ticket #${t.id} reopened`,
+            detail: "Client rejected resolution",
+            href: `/tickets/${t.id}`,
+            unread: true,
+            kind: "status",
+          });
+          return { ...prev, tickets: prev.tickets.map((x) => (x.id === ticketId ? updated : x)) };
+        });
+        toast.message("Resolution rejected — ticket reopened");
+      },
+
       markNotificationsRead: () => {
         setAndPersist((prev) => ({
           ...prev,
@@ -544,7 +684,17 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
         }));
       },
 
-      convertEmailToTicket: ({ emailId, project, supportType }) => {
+      convertEmailToTicket: ({
+        emailId,
+        project,
+        projectName,
+        slaId,
+        subject,
+        description,
+        priority,
+        category,
+        supportType,
+      }) => {
         const created = new Date().toISOString();
         let ticketId = "";
 
@@ -557,17 +707,20 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
           ticketId = String(Math.floor(10000 + Math.random() * 89999)).slice(-5);
           const now = created;
 
-          const newTicket: Ticket = {
+          const newTicket = enrichTicket({
             id: ticketId,
             createdAt: now,
             updatedAt: now,
             project,
+            projectName,
+            slaId: slaId ?? null,
+            category,
             contactName: first?.from.name ?? "Client Contact",
             supportType,
-            subject: first?.subject ?? `Email intake: ${emailId}`,
-            description: first?.body ?? `Converted from email thread ${emailId}`,
+            subject,
+            description,
             status: "Open",
-            priority: thread.priority,
+            priority,
             resolutionDueDate: null,
             assignedEngineerIds: thread.assignedEngineerId ? [thread.assignedEngineerId] : [],
             assignedEngineerId: thread.assignedEngineerId,
@@ -576,8 +729,8 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
             issues: [
               {
                 id: uid("iss"),
-                title: "Email-reported issue",
-                description: "Initial issue captured from inbound email.",
+                title: subject,
+                description: description.slice(0, 500),
                 attachments: att,
               },
             ],
@@ -598,7 +751,7 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
               initials: first?.from.initials ?? "CC",
               role: "Client Contact",
             },
-          };
+          }, prev.slas);
 
           const updatedThread: EmailThread = {
             ...thread,
@@ -934,14 +1087,42 @@ export function ServiceDeskProvider({ children }: { children: React.ReactNode })
     [notify, setAndPersist],
   );
 
-  const store = React.useMemo<Store>(() => ({ ...state, ...actions }), [actions, state]);
+  const notificationsValue = React.useMemo<NotificationsValue>(
+    () => ({
+      notifications: state.notifications,
+      markNotificationsRead: actions.markNotificationsRead,
+      markNotificationRead: actions.markNotificationRead,
+      dismissNotification: actions.dismissNotification,
+    }),
+    [
+      state.notifications,
+      actions.markNotificationsRead,
+      actions.markNotificationRead,
+      actions.dismissNotification,
+    ],
+  );
 
-  return <ServiceDeskContext.Provider value={store}>{children}</ServiceDeskContext.Provider>;
+  return (
+    <ServiceDeskStateContext.Provider value={state}>
+      <ServiceDeskActionsContext.Provider value={actions}>
+        <NotificationsContext.Provider value={notificationsValue}>
+          {children}
+        </NotificationsContext.Provider>
+      </ServiceDeskActionsContext.Provider>
+    </ServiceDeskStateContext.Provider>
+  );
+}
+
+export function useNotifications() {
+  const ctx = React.useContext(NotificationsContext);
+  if (!ctx) throw new Error("useNotifications must be used within ServiceDeskProvider");
+  return ctx;
 }
 
 export function useServiceDesk() {
-  const ctx = React.useContext(ServiceDeskContext);
-  if (!ctx) throw new Error("useServiceDesk must be used within ServiceDeskProvider");
-  return ctx;
+  const state = React.useContext(ServiceDeskStateContext);
+  const actions = React.useContext(ServiceDeskActionsContext);
+  if (!state || !actions) throw new Error("useServiceDesk must be used within ServiceDeskProvider");
+  return { ...state, ...actions } as Store;
 }
 

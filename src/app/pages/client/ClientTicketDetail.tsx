@@ -76,8 +76,9 @@ export function ClientTicketDetail() {
   const { id = "" } = useParams();
   const ticketId = id.replace("#", "");
   const { user } = useAuth();
-  const { tickets, engineers, addTicketComment, slas } = useServiceDesk();
+  const { tickets, engineers, addTicketComment, slas, confirmTicketResolution, rejectTicketResolution } = useServiceDesk();
   const [comment, setComment] = useState("");
+  const [rejectReason, setRejectReason] = useState("");
 
   const ticket = tickets.find((t) => t.id === ticketId);
   const isOwnTicket = ticket?.project === user?.company;
@@ -154,13 +155,10 @@ export function ClientTicketDetail() {
           onClick={() => navigate("/client/tickets")}
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          My Tickets
+          {user?.company ?? "Tickets"}
         </Button>
         <Separator orientation="vertical" className="mx-1 h-4" />
         <span className="font-mono text-[12px] text-muted-foreground">#{ticket.id}</span>
-        <Badge variant="secondary" className="ml-auto text-[11px]">
-          Read-only
-        </Badge>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -197,7 +195,7 @@ export function ClientTicketDetail() {
                 </div>
                 <div className="flex items-center gap-1">
                   <Building2 className="w-3.5 h-3.5" />
-                  {ticket.project}
+                  {getTicketProjectName(ticket, slas)}
                 </div>
                 <div className="flex items-center gap-1">
                   <User className="w-3.5 h-3.5" />
@@ -210,6 +208,56 @@ export function ClientTicketDetail() {
 
         <div className="grid min-h-0 flex-1 grid-cols-[minmax(320px,2fr)_minmax(400px,2.5fr)] overflow-hidden">
           <div className={`min-w-0 border-r bg-background ${scrollClass}`}>
+            {ticket.status === "Resolved" && (
+              <div className="border-b bg-emerald-50 px-5 py-4">
+                <div className="mb-2 flex items-center gap-2 text-[13px] font-semibold text-emerald-800">
+                  <CheckCircle2 className="size-4" />
+                  Resolution pending your confirmation
+                </div>
+                <p className="mb-3 text-[12px] text-emerald-900">
+                  Please confirm the issue is resolved, or reopen the ticket with feedback.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    className="h-8 bg-emerald-600 hover:bg-emerald-700"
+                    onClick={() =>
+                      user &&
+                      confirmTicketResolution({
+                        ticketId: ticket.id,
+                        author: { name: user.name, initials: user.initials },
+                      })
+                    }
+                  >
+                    Confirm Resolved
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8"
+                    onClick={() => {
+                      if (!rejectReason.trim() || !user) return;
+                      rejectTicketResolution({
+                        ticketId: ticket.id,
+                        reason: rejectReason.trim(),
+                        author: { name: user.name, initials: user.initials },
+                      });
+                      setRejectReason("");
+                    }}
+                    disabled={!rejectReason.trim()}
+                  >
+                    Reopen Ticket
+                  </Button>
+                </div>
+                <Textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="If not resolved, explain what still needs attention..."
+                  rows={2}
+                  className="mt-3 resize-none text-[12px]"
+                />
+              </div>
+            )}
             <div className="space-y-0">
               <Card className={panelClass}>
                 <CardHeader className={panelHeaderClass}>

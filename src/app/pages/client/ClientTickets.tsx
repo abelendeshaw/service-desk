@@ -20,7 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
-import { getTicketSupportType, resolveTicketSupportType, supportTypeBadgeClass } from "../../lib/ticketSupportType";
+import { getClientSLAs, getTicketProjectName, ticketMatchesProjectFilter } from "../../lib/ticketProjects";
+import { resolveTicketSupportType, supportTypeBadgeClass } from "../../lib/ticketSupportType";
 import { useAuth } from "../../store/authStore";
 import { useServiceDesk } from "../../store/serviceDeskStore";
 
@@ -50,6 +51,12 @@ export function ClientTickets() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [projectFilter, setProjectFilter] = useState("all");
+
+  const clientProjects = useMemo(
+    () => (user ? getClientSLAs(user.company, slas) : []),
+    [user, slas],
+  );
 
   const myTickets = useMemo(
     () => tickets.filter((t) => t.project === user?.company),
@@ -67,18 +74,19 @@ export function ClientTickets() {
       }
       if (statusFilter !== "all" && t.status.toLowerCase() !== statusFilter) return false;
       if (priorityFilter !== "all" && t.priority?.toLowerCase() !== priorityFilter) return false;
+      if (!ticketMatchesProjectFilter(t, projectFilter, slas)) return false;
       return true;
     });
-  }, [myTickets, search, statusFilter, priorityFilter]);
+  }, [myTickets, search, statusFilter, priorityFilter, projectFilter, slas]);
 
   return (
     <div className="flex h-full flex-col bg-muted/30">
       <div className="border-b bg-background px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[20px] font-semibold tracking-tight">My Tickets</h1>
+            <h1 className="text-[20px] font-semibold tracking-tight">{user?.company}</h1>
             <p className="mt-0.5 text-[13px] text-muted-foreground">
-              Support tickets for {user?.company} · {myTickets.length} total
+              Support tickets · {myTickets.length} total
             </p>
           </div>
           <Button
@@ -123,6 +131,15 @@ export function ClientTickets() {
             <SelectItem value="low">Low</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={projectFilter} onValueChange={setProjectFilter}>
+          <SelectTrigger className="h-8 w-[200px] text-[13px]"><SelectValue placeholder="Project" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Projects</SelectItem>
+            {clientProjects.map((sla) => (
+              <SelectItem key={sla.id} value={sla.id}>{sla.projectName}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex-1 overflow-auto">
@@ -130,6 +147,7 @@ export function ClientTickets() {
           <TableHeader className="sticky top-0 z-10 bg-background">
             <TableRow>
               <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Ticket</TableHead>
+              <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Project</TableHead>
               <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Status</TableHead>
               <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Support</TableHead>
               <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Priority</TableHead>
@@ -141,10 +159,10 @@ export function ClientTickets() {
           <TableBody className="bg-background">
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-16 text-center">
+                <TableCell colSpan={8} className="py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <p className="text-[13px] text-muted-foreground">
-                      {search || statusFilter !== "all" || priorityFilter !== "all"
+                      {search || statusFilter !== "all" || priorityFilter !== "all" || projectFilter !== "all"
                         ? "No tickets match your filters."
                         : "No tickets yet. Submit your first support request."}
                     </p>
@@ -184,6 +202,9 @@ export function ClientTickets() {
                           <div className="text-[11px] text-muted-foreground">#{ticket.id} · {formatDate(ticket.createdAt)}</div>
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell className="px-5 py-3.5 text-[12px] text-muted-foreground">
+                      {getTicketProjectName(ticket, slas)}
                     </TableCell>
                     <TableCell className="px-5 py-3.5">
                       <Badge variant="outline" className={`gap-1.5 text-[11px] ${sc?.badgeClass}`}>

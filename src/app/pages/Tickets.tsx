@@ -37,6 +37,7 @@ import {
 import { RowActionsMenu } from '../components/RowActionsMenu';
 import { useServiceDesk } from '../store/serviceDeskStore';
 import { EmailSupportPanel } from './EmailSupport';
+import { getTicketProjectName, ticketMatchesProjectFilter } from '../lib/ticketProjects';
 
 type TicketsTab = 'tickets' | 'email';
 
@@ -61,7 +62,7 @@ export function Tickets() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab: TicketsTab = searchParams.get('tab') === 'email' ? 'email' : 'tickets';
-  const { tickets, engineers } = useServiceDesk();
+  const { tickets, engineers, slas } = useServiceDesk();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -71,7 +72,10 @@ export function Tickets() {
   const [toDate, setToDate] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
 
-  const projects = useMemo(() => Array.from(new Set(tickets.map((t) => t.project))).sort(), [tickets]);
+  const projects = useMemo(
+    () => slas.map((s) => ({ id: s.id, label: `${s.projectName} (${s.companyName})` })),
+    [slas],
+  );
 
   const filtered = useMemo(() => {
     return tickets.filter((t) => {
@@ -87,7 +91,7 @@ export function Tickets() {
         if (priorityFilter === 'none' && t.priority !== null) return false;
         if (priorityFilter !== 'none' && t.priority?.toLowerCase() !== priorityFilter) return false;
       }
-      if (projectFilter !== 'all' && t.project !== projectFilter) return false;
+      if (projectFilter !== 'all' && !ticketMatchesProjectFilter(t, projectFilter, slas)) return false;
       const assignedIds = t.assignedEngineerIds ?? (t.assignedEngineerId ? [t.assignedEngineerId] : []);
       if (engineerFilter === 'unassigned' && assignedIds.length > 0) return false;
       if (engineerFilter !== 'all' && engineerFilter !== 'unassigned' && !assignedIds.includes(engineerFilter)) return false;
@@ -95,7 +99,7 @@ export function Tickets() {
       if (toDate && t.createdAt.slice(0, 10) > toDate) return false;
       return true;
     });
-  }, [engineerFilter, fromDate, priorityFilter, projectFilter, search, statusFilter, tickets, toDate]);
+  }, [engineerFilter, fromDate, priorityFilter, projectFilter, search, statusFilter, tickets, toDate, slas]);
 
   React.useEffect(() => {
     setSelected((prev) => prev.filter((id) => filtered.some((t) => t.id === id)));
@@ -237,8 +241,8 @@ export function Tickets() {
           <SelectContent>
             <SelectItem value="all">All Projects</SelectItem>
             {projects.map((p) => (
-              <SelectItem key={p} value={p}>
-                {p}
+              <SelectItem key={p.id} value={p.id}>
+                {p.label}
               </SelectItem>
             ))}
           </SelectContent>

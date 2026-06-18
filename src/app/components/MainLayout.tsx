@@ -42,7 +42,7 @@ import {
 } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { useServiceDesk } from "../store/serviceDeskStore";
+import { useNotifications } from "../store/serviceDeskStore";
 import { useAuth } from "../store/authStore";
 
 function relativeTime(iso: string): string {
@@ -115,7 +115,7 @@ export function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { notifications, markNotificationsRead, markNotificationRead, dismissNotification } = useServiceDesk();
+  const { notifications, markNotificationsRead, markNotificationRead, dismissNotification } = useNotifications();
   const unreadCount = notifications.filter((n) => n.unread).length;
   const displayedNotifs = notifFilter === "unread" ? notifications.filter((n) => n.unread) : notifications;
 

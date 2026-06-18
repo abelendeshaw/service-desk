@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { Search, ArrowUpDown, Eye } from "lucide-react";
+import { Search, ArrowUpDown, Eye, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "../../components/ui/avatar";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -20,6 +21,16 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
+import { Textarea } from "../../components/ui/textarea";
+import { Label } from "../../components/ui/label";
 import { filterTicketsForEngineer } from "../../lib/engineerTickets";
 import { resolveTicketSupportType, supportTypeBadgeClass } from "../../lib/ticketSupportType";
 import { useAuth } from "../../store/authStore";
@@ -47,10 +58,14 @@ function formatDate(iso: string) {
 export function EngineerTickets() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { tickets, slas } = useServiceDesk();
+  const { tickets, slas, updateTicketStatus, addTicketComment } = useServiceDesk();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [resolveTicketId, setResolveTicketId] = useState<string | null>(null);
+  const [resolutionNotes, setResolutionNotes] = useState("");
+
+  const resolveTicket = resolveTicketId ? tickets.find((t) => t.id === resolveTicketId) : null;
 
   const myTickets = useMemo(
     () => filterTicketsForEngineer(tickets, user?.engineerId),
@@ -72,6 +87,28 @@ export function EngineerTickets() {
       return true;
     });
   }, [myTickets, search, statusFilter, priorityFilter]);
+
+  const handleResolve = () => {
+    if (!resolveTicket || !user) return;
+    const note = resolutionNotes.trim();
+    updateTicketStatus({
+      ticketId: resolveTicket.id,
+      status: "Resolved",
+      reason: note || undefined,
+    });
+    if (note) {
+      addTicketComment({
+        ticketId: resolveTicket.id,
+        body: note,
+        internal: false,
+        attachments: [],
+        author: { name: user.name, initials: user.initials, role: "Field Engineer" },
+      });
+    }
+    setResolveTicketId(null);
+    setResolutionNotes("");
+    toast.success("Ticket marked as resolved");
+  };
 
   return (
     <div className="flex h-full flex-col bg-muted/30">
@@ -127,13 +164,13 @@ export function EngineerTickets() {
               <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Priority</TableHead>
               <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Project</TableHead>
               <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Updated</TableHead>
-              <TableHead className="w-16 px-5 py-3" />
+              <TableHead className="w-36 px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="bg-background">
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-16 text-center">
+                <TableCell colSpan={8} className="py-16 text-center">
                   <p className="text-[13px] text-muted-foreground">
                     {search || statusFilter !== "all" || priorityFilter !== "all"
                       ? "No tickets match your filters."
@@ -188,10 +225,31 @@ export function EngineerTickets() {
                     <TableCell className="px-5 py-3.5 text-[12px] text-muted-foreground">
                       {formatDate(ticket.updatedAt)}
                     </TableCell>
-                    <TableCell className="px-5 py-3.5">
-                      <Button variant="ghost" size="icon" className="size-7">
-                        <Eye className="w-3.5 h-3.5" />
-                      </Button>
+                    <TableCell className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7"
+                          onClick={() => navigate(`/engineer/tickets/${ticket.id}`)}
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </Button>
+                        {ticket.status !== "Resolved" && ticket.status !== "Closed" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 gap-1 px-2 text-[11px] text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                            onClick={() => {
+                              setResolveTicketId(ticket.id);
+                              setResolutionNotes("");
+                            }}
+                          >
+                            <CheckCircle2 className="w-3 h-3" />
+                            Resolve
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -210,6 +268,43 @@ export function EngineerTickets() {
           Sorted by latest update
         </div>
       </div>
+
+      <Dialog
+        open={resolveTicketId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResolveTicketId(null);
+            setResolutionNotes("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Resolve Ticket</DialogTitle>
+            <DialogDescription>
+              Mark ticket #{resolveTicket?.id} as resolved. Add an optional note for the client.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label className="text-[12px]">
+              Resolution note <span className="font-normal text-muted-foreground">(optional)</span>
+            </Label>
+            <Textarea
+              value={resolutionNotes}
+              onChange={(e) => setResolutionNotes(e.target.value)}
+              placeholder="Describe what was done to resolve the issue..."
+              rows={5}
+              className="resize-none text-[13px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResolveTicketId(null)}>Cancel</Button>
+            <Button onClick={handleResolve}>
+              Mark Resolved
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

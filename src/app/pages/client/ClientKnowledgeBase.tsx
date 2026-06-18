@@ -44,11 +44,11 @@ export function ClientKnowledgeBase() {
 
   return (
     <div className="flex h-full flex-col bg-muted/30">
-      <div className="border-b bg-background px-6 py-4 flex-shrink-0">
+      <div className="bg-sidebar border-sidebar-border flex-shrink-0 border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[20px] font-semibold tracking-tight">Knowledge Base</h1>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">
+            <h1 className="text-sidebar-foreground text-[20px] font-semibold tracking-tight">Knowledge Base</h1>
+            <p className="text-sidebar-muted-foreground mt-0.5 text-[13px]">
               Your organization&apos;s articles · {myArticles.length} total
             </p>
           </div>

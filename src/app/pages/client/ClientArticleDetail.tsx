@@ -79,22 +79,22 @@ export function ClientArticleDetail() {
 
   return (
     <div className="min-h-full bg-muted/30">
-      <div className="border-b bg-background px-6 py-4">
+      <div className="bg-sidebar border-sidebar-border border-b px-6 py-4">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="icon" className="size-8" onClick={() => navigate("/client/knowledge")}>
+            <Button variant="outline" size="icon" className="size-8 border-violet-400/25 bg-white" onClick={() => navigate("/client/knowledge")}>
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <div>
               <div className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-violet-600" />
+                <BookOpen className="text-primary w-4 h-4" />
                 <Badge variant="outline" className="text-[11px]">{article.category}</Badge>
                 <Badge variant={article.status === "Published" ? "default" : "secondary"} className="text-[11px]">
                   {article.status}
                 </Badge>
               </div>
               {!editing ? (
-                <h1 className="mt-1 text-[20px] font-semibold tracking-tight">{article.title}</h1>
+                <h1 className="text-sidebar-foreground mt-1 text-[20px] font-semibold tracking-tight">{article.title}</h1>
               ) : (
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-2 h-9 text-[16px] font-semibold" />
               )}

@@ -14,7 +14,6 @@ import {
   HelpCircle,
   CheckCheck,
   X,
-  Wrench,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -35,9 +34,8 @@ import {
 } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Badge } from "./ui/badge";
 import { useAuth } from "../store/authStore";
-import { useServiceDesk } from "../store/serviceDeskStore";
+import { useNotifications } from "../store/serviceDeskStore";
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -51,13 +49,17 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-const navItems = [
-  { name: "Dashboard", href: "/engineer", icon: LayoutDashboard, end: true },
-  { name: "My Tickets", href: "/engineer/tickets", icon: Ticket, end: false },
-  { name: "Knowledge Base", href: "/engineer/knowledge", icon: BookOpen, end: false },
+const navGroups = [
+  {
+    label: "Helpdesk",
+    items: [
+      { name: "My Tickets", href: "/engineer/tickets", icon: Ticket, exact: false },
+      { name: "Knowledge Base", href: "/engineer/knowledge", icon: BookOpen, exact: false },
+    ],
+  },
 ];
 
-function isEngineerNavItemActive(href: string, pathname: string, end?: boolean) {
+function isEngineerNavItemActive(href: string, pathname: string, exact?: boolean) {
   const isCreateArticle = pathname.startsWith("/engineer/knowledge/edit/");
 
   if (href === "/engineer/knowledge") {
@@ -66,7 +68,7 @@ function isEngineerNavItemActive(href: string, pathname: string, end?: boolean) 
   if (href === "/engineer/tickets") {
     return pathname.startsWith("/engineer/tickets") || isCreateArticle;
   }
-  if (end) {
+  if (exact) {
     return pathname === href;
   }
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -80,7 +82,7 @@ export function EngineerLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { notifications, markNotificationsRead, markNotificationRead, dismissNotification } = useServiceDesk();
+  const { notifications, markNotificationsRead, markNotificationRead, dismissNotification } = useNotifications();
 
   useEffect(() => {
     if (!user) navigate("/login", { replace: true, state: { portal: "engineer" } });
@@ -126,17 +128,21 @@ export function EngineerLayout() {
           className={`border-sidebar-border h-[56px] flex items-center border-b flex-shrink-0 ${sidebarCollapsed ? "px-3 justify-between" : "px-4 justify-between"}`}
         >
           {sidebarCollapsed ? (
-            <div className="bg-violet-500 text-white flex size-7 items-center justify-center rounded-md flex-shrink-0">
-              <Wrench className="w-4 h-4" />
+            <div className="bg-secondary text-secondary-foreground flex size-7 items-center justify-center rounded-md flex-shrink-0">
+              <Ticket className="text-secondary-foreground w-4 h-4" />
             </div>
           ) : (
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="bg-violet-500 text-white flex size-7 items-center justify-center rounded-md flex-shrink-0">
-                <Wrench className="w-4 h-4" />
+              <div className="bg-secondary text-secondary-foreground flex size-7 items-center justify-center rounded-md flex-shrink-0">
+                <Ticket className="text-secondary-foreground w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-sidebar-foreground text-sm font-semibold leading-tight truncate">Field Engineer</div>
-                <div className="text-sidebar-foreground/60 text-xs leading-tight truncate">{user.company}</div>
+                <div className="text-sidebar-foreground text-sm font-semibold leading-tight truncate">
+                  Service Desk
+                </div>
+                <div className="text-sidebar-foreground/60 text-xs leading-tight truncate">
+                  Field Engineer
+                </div>
               </div>
             </div>
           )}
@@ -150,37 +156,67 @@ export function EngineerLayout() {
           </Button>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto py-3 px-2">
-          {!sidebarCollapsed && (
-            <div className="mb-2 px-2">
-              <Badge variant="secondary" className="bg-violet-500/15 text-violet-700 border-violet-400/25 text-[10px]">
-                Engineer Workspace
-              </Badge>
-            </div>
-          )}
-          {navItems.map((item) => {
-            const active = isEngineerNavItemActive(item.href, location.pathname, item.end);
-            return (
+        <nav className="flex flex-1 flex-col gap-4 overflow-y-auto py-3 px-2">
+          <div className="flex flex-col gap-0.5">
             <NavLink
-              key={item.name}
-              to={item.href}
-              end={item.end}
-              className={`flex items-center gap-3 px-2 py-2 rounded-md transition-all duration-100 group relative ${
-                active
-                  ? "bg-white text-violet-700 dark:bg-sidebar-muted dark:text-sidebar-foreground"
-                  : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
-              } ${sidebarCollapsed ? "justify-center" : ""}`}
+              to="/engineer"
+              end
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-2 py-2 rounded-md transition-all duration-100 group relative ${
+                  isActive
+                    ? "bg-white text-primary dark:bg-sidebar-muted dark:text-sidebar-foreground"
+                    : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                } ${sidebarCollapsed ? "justify-center" : ""}`
+              }
             >
-              <>
-                {active && !sidebarCollapsed && (
-                  <div className="bg-violet-400 absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full" />
-                )}
-                <item.icon className={`w-4 h-4 flex-shrink-0 ${active ? "text-violet-700 dark:text-sidebar-foreground" : ""}`} />
-                {!sidebarCollapsed && <span className="text-[13px] font-medium truncate">{item.name}</span>}
-              </>
+              {({ isActive }) => (
+                <>
+                  {isActive && !sidebarCollapsed && (
+                    <div className="bg-sidebar-accent absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full" />
+                  )}
+                  <LayoutDashboard className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-primary dark:text-sidebar-foreground" : ""}`} />
+                  {!sidebarCollapsed && <span className="text-[13px] font-medium truncate">Dashboard</span>}
+                </>
+              )}
             </NavLink>
-            );
-          })}
+          </div>
+
+          {navGroups.map((group) => (
+            <div key={group.label}>
+              {!sidebarCollapsed && (
+                <div className="mb-1 px-2">
+                  <span className="text-sidebar-foreground/60 text-[10px] uppercase tracking-widest font-semibold">
+                    {group.label}
+                  </span>
+                </div>
+              )}
+              <div className="flex flex-col gap-0.5">
+                {group.items.map((item) => {
+                  const active = isEngineerNavItemActive(item.href, location.pathname, item.exact);
+                  return (
+                    <NavLink
+                      key={item.name}
+                      to={item.href}
+                      end={item.exact}
+                      className={`flex items-center gap-3 px-2 py-2 rounded-md transition-all duration-100 group relative ${
+                        active
+                          ? "bg-white text-primary dark:bg-sidebar-muted dark:text-sidebar-foreground"
+                          : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                      } ${sidebarCollapsed ? "justify-center" : ""}`}
+                    >
+                      <>
+                        {active && !sidebarCollapsed && (
+                          <div className="bg-sidebar-accent absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full" />
+                        )}
+                        <item.icon className={`w-4 h-4 flex-shrink-0 ${active ? "text-primary dark:text-sidebar-foreground" : ""}`} />
+                        {!sidebarCollapsed && <span className="text-[13px] font-medium truncate">{item.name}</span>}
+                      </>
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         <div className="border-sidebar-border flex-shrink-0 border-t p-2">
@@ -189,7 +225,7 @@ export function EngineerLayout() {
             className={({ isActive }) =>
               `flex items-center gap-3 px-2 py-2 rounded-md transition-all group relative ${
                 isActive
-                  ? "bg-white text-violet-700 dark:bg-sidebar-muted dark:text-sidebar-foreground"
+                  ? "bg-white text-primary dark:bg-sidebar-muted dark:text-sidebar-foreground"
                   : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
               } ${sidebarCollapsed ? "justify-center" : ""}`
             }
@@ -197,9 +233,9 @@ export function EngineerLayout() {
             {({ isActive }) => (
               <>
                 {isActive && !sidebarCollapsed && (
-                  <div className="bg-violet-400 absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full" />
+                  <div className="bg-sidebar-accent absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full" />
                 )}
-                <UserCircle className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-violet-700 dark:text-sidebar-foreground" : ""}`} />
+                <UserCircle className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-primary dark:text-sidebar-foreground" : ""}`} />
                 {!sidebarCollapsed && <span className="text-[13px] font-medium">Account</span>}
               </>
             )}
@@ -250,7 +286,7 @@ export function EngineerLayout() {
                       engineerNotifications.slice(0, 8).map((n) => (
                         <div
                           key={n.id}
-                          className={`flex gap-3 px-4 py-3 border-b cursor-pointer hover:bg-muted/40 ${n.unread ? "bg-violet-50/40" : ""}`}
+                          className={`flex gap-3 px-4 py-3 border-b cursor-pointer hover:bg-muted/40 ${n.unread ? "bg-primary/5" : ""}`}
                           onClick={() => {
                             markNotificationRead(n.id);
                             if (n.href) {
@@ -287,7 +323,7 @@ export function EngineerLayout() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-auto gap-2 px-0 hover:bg-transparent">
-                  <div className="bg-violet-600 text-white flex size-7 items-center justify-center rounded-full text-xs font-semibold">
+                  <div className="bg-primary text-primary-foreground flex size-7 items-center justify-center rounded-full text-xs font-semibold">
                     {user.initials}
                   </div>
                   <div className="text-left hidden sm:block">

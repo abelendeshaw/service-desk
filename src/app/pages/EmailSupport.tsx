@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import {
@@ -8,9 +8,9 @@ import {
   Paperclip,
   Star,
   StarOff,
-  RefreshCw,
   Filter,
   ArrowUpDown,
+  Ticket,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
@@ -20,128 +20,11 @@ import { Input } from '../components/ui/input';
 import { RowActionsMenu } from '../components/RowActionsMenu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Separator } from '../components/ui/separator';
+import { ConvertEmailToTicketDialog } from '../components/ConvertEmailToTicketDialog';
+import { useServiceDesk } from '../store/serviceDeskStore';
+import type { EmailThread } from '../store/types';
 
-const emails = [
-  {
-    id: 'EM-001',
-    from: 'EPSS Client',
-    fromEmail: 'epss@gmail.com',
-    initials: 'EP',
-    color: '#7c3aed',
-    subject: 'Urgent: FortiGate firewall dropping VPN sessions intermittently',
-    preview: 'We are experiencing frequent VPN session drops on our FortiGate firewall at the Addis Ababa data center. This is affecting...',
-    date: '10:32 AM',
-    status: 'Open',
-    priority: 'Critical',
-    unread: true,
-    starred: false,
-    attachments: 1,
-    tag: 'Network',
-    fieldEngineer: 'WW',
-  },
-  {
-    id: 'EM-002',
-    from: 'IE Client',
-    fromEmail: 'ie@gmail.com',
-    initials: 'IE',
-    color: '#0891b2',
-    subject: 'Request: New user account creation for 3 staff members',
-    preview: 'Good morning, we need to create new Active Directory accounts for 3 new staff joining next Monday. Please find the details attached.',
-    date: 'Yesterday',
-    status: 'Pending',
-    priority: 'Low',
-    unread: false,
-    starred: true,
-    attachments: 0,
-    tag: 'Access',
-    fieldEngineer: 'SS',
-  },
-  {
-    id: 'EM-003',
-    from: 'MinT Client',
-    fromEmail: 'mint@gmail.com',
-    initials: 'MI',
-    color: '#6b7280',
-    subject: 'Follow-up on network latency issue reported last week',
-    preview: 'We wanted to follow up on the network latency issue we reported last week. The problem persists during peak hours between 9AM and 12PM.',
-    date: 'Yesterday',
-    status: 'Open',
-    priority: 'High',
-    unread: false,
-    starred: false,
-    attachments: 2,
-    tag: 'Network',
-    fieldEngineer: 'DB',
-  },
-  {
-    id: 'EM-004',
-    from: 'CSA Client',
-    fromEmail: 'csa@gmail.com',
-    initials: 'CS',
-    color: '#0891b2',
-    subject: 'Monthly report request — Q1 2026 system uptime and incident summary',
-    preview: 'Please provide the monthly uptime and incident report for Q1 2026. The management team needs this by end of week for their review.',
-    date: 'Apr 12',
-    status: 'Closed',
-    priority: 'Medium',
-    unread: false,
-    starred: false,
-    attachments: 0,
-    tag: 'Reporting',
-    fieldEngineer: 'AT',
-  },
-  {
-    id: 'EM-005',
-    from: 'ERA/MOTL Client',
-    fromEmail: 'eramotl@gmail.com',
-    initials: 'ER',
-    color: '#059669',
-    subject: 'Infrastructure upgrade proposal — need technical review',
-    preview: 'We are planning to upgrade our server infrastructure and would like a technical review of our proposed setup before proceeding.',
-    date: 'Apr 11',
-    status: 'Open',
-    priority: 'Medium',
-    unread: true,
-    starred: false,
-    attachments: 3,
-    tag: 'Infrastructure',
-    fieldEngineer: null,
-  },
-  {
-    id: 'EM-006',
-    from: 'MoWS Client',
-    fromEmail: 'mows@gmail.com',
-    initials: 'MW',
-    color: '#d97706',
-    subject: 'CSAT Survey Response — Technical Support Feedback',
-    preview: 'Thank you for the recent support engagement. We have completed the CSAT survey and wanted to share our feedback directly as well.',
-    date: 'Apr 10',
-    status: 'Closed',
-    priority: 'Low',
-    unread: false,
-    starred: false,
-    attachments: 0,
-    tag: 'CSAT',
-    fieldEngineer: 'WW',
-  },
-  {
-    id: 'EM-007',
-    from: 'Abay Bank Client',
-    fromEmail: 'abaybank@gmail.com',
-    initials: 'AB',
-    color: '#dc2626',
-    subject: 'Critical: Core banking system cannot connect to backup server',
-    preview: 'URGENT — Our core banking application is failing to connect to the backup server since this morning. Transactions are being affected.',
-    date: 'Apr 9',
-    status: 'Closed',
-    priority: 'Critical',
-    unread: false,
-    starred: true,
-    attachments: 1,
-    tag: 'Critical',
-    fieldEngineer: 'SS',
-  },
-];
+const avatarColors = ['#7c3aed', '#0891b2', '#059669', '#d97706', '#1d4ed8', '#dc2626'];
 
 const priorityConfig: Record<string, { badgeClass: string }> = {
   Critical: { badgeClass: 'bg-red-50 text-red-700 border-red-200' },
@@ -156,21 +39,54 @@ const statusConfig: Record<string, { badgeClass: string; dotClass: string }> = {
   Closed: { badgeClass: 'bg-muted text-muted-foreground border-border', dotClass: 'bg-muted-foreground' },
 };
 
-const folderCounts = {
-  All: emails.length,
-  Open: emails.filter(e => e.status === 'Open').length,
-  Pending: emails.filter(e => e.status === 'Pending').length,
-  Closed: emails.filter(e => e.status === 'Closed').length,
-  Starred: emails.filter(e => e.starred).length,
-};
-
-const folderColors: Record<keyof typeof folderCounts, string> = {
+const folderColors = {
   All: '#0b2235',
   Open: '#2563eb',
   Pending: '#d97706',
   Closed: '#6c757d',
   Starred: '#eab308',
+} as const;
+
+type EmailListItem = {
+  id: string;
+  from: string;
+  fromEmail: string;
+  initials: string;
+  color: string;
+  subject: string;
+  preview: string;
+  date: string;
+  status: string;
+  priority: string;
+  unread: boolean;
+  starred: boolean;
+  attachments: number;
+  tag: string | null;
+  linkedTicketId: string | null;
 };
+
+function mapThreadsToEmails(threads: EmailThread[]): EmailListItem[] {
+  return threads.map((thread, i) => {
+    const first = thread.messages[0];
+    return {
+      id: thread.id,
+      from: first?.from.name ?? 'Unknown',
+      fromEmail: first?.from.email ?? '',
+      initials: first?.from.initials ?? '??',
+      color: avatarColors[i % avatarColors.length],
+      subject: first?.subject ?? thread.id,
+      preview: (first?.body ?? '').slice(0, 120),
+      date: new Date(thread.updatedAt).toLocaleDateString(),
+      status: thread.status,
+      priority: thread.priority,
+      unread: thread.unread,
+      starred: thread.starred,
+      attachments: first?.attachments.length ?? 0,
+      tag: thread.tag,
+      linkedTicketId: thread.linkedTicketId,
+    };
+  });
+}
 
 type EmailSupportPanelProps = {
   embedded?: boolean;
@@ -178,14 +94,55 @@ type EmailSupportPanelProps = {
 
 export function EmailSupportPanel({ embedded = false }: EmailSupportPanelProps) {
   const navigate = useNavigate();
+  const { emailThreads } = useServiceDesk();
+  const emails = useMemo(() => mapThreadsToEmails(emailThreads), [emailThreads]);
   const [search, setSearch] = useState('');
   const [folder, setFolder] = useState<'All' | 'Open' | 'Pending' | 'Closed' | 'Starred'>('All');
   const [priorityFilter, setPriorityFilter] = useState('all');
-  const [starred, setStarred] = useState<Record<string, boolean>>(
-    Object.fromEntries(emails.map(e => [e.id, e.starred]))
+  const [starred, setStarred] = useState<Record<string, boolean>>({});
+  const [convertThreadId, setConvertThreadId] = useState<string | null>(null);
+  const convertOpen = convertThreadId !== null;
+  const convertThread = convertThreadId
+    ? emailThreads.find((t) => t.id === convertThreadId) ?? null
+    : null;
+
+  const openCreateTicket = (threadId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const thread = emailThreads.find((t) => t.id === threadId);
+    if (thread?.linkedTicketId) {
+      toast.info(`Already linked to ticket #${thread.linkedTicketId}`);
+      navigate(`/tickets/${thread.linkedTicketId}`);
+      return;
+    }
+    setConvertThreadId(threadId);
+  };
+
+  React.useEffect(() => {
+    setStarred((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const e of emails) {
+        if (next[e.id] === undefined) {
+          next[e.id] = e.starred;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [emails]);
+
+  const folderCounts = useMemo(
+    () => ({
+      All: emails.length,
+      Open: emails.filter((e) => e.status === 'Open').length,
+      Pending: emails.filter((e) => e.status === 'Pending').length,
+      Closed: emails.filter((e) => e.status === 'Closed').length,
+      Starred: emails.filter((e) => starred[e.id]).length,
+    }),
+    [emails, starred],
   );
 
-  const filtered = emails.filter(e => {
+  const filtered = emails.filter((e) => {
     if (search && !e.subject.toLowerCase().includes(search.toLowerCase()) && !e.from.toLowerCase().includes(search.toLowerCase())) return false;
     if (folder === 'Starred' && !starred[e.id]) return false;
     if (folder !== 'All' && folder !== 'Starred' && e.status !== folder) return false;
@@ -205,10 +162,6 @@ export function EmailSupportPanel({ embedded = false }: EmailSupportPanelProps) 
               <p className="mt-0.5 text-[13px] text-muted-foreground">Client email conversations and support requests</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="gap-1.5 text-[13px]">
-                <RefreshCw className="w-3.5 h-3.5" />
-                Refresh
-              </Button>
               <Button
                 onClick={() => navigate('/email-support/new')}
                 size="sm"
@@ -363,20 +316,46 @@ export function EmailSupportPanel({ embedded = false }: EmailSupportPanelProps) 
                           {email.attachments}
                         </span>
                       )}
-                      {email.fieldEngineer && (
-                        <Avatar className="ml-auto size-5">
-                          <AvatarFallback className="text-[9px] font-semibold">{email.fieldEngineer}</AvatarFallback>
-                        </Avatar>
+                      {email.linkedTicketId && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          Ticket #{email.linkedTicketId}
+                        </Badge>
                       )}
                     </div>
                   </div>
 
-                  <div onClick={(e) => e.stopPropagation()}>
+                  <div className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    {!email.linkedTicketId && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 gap-1 px-2 text-[11px] opacity-0 transition-opacity group-hover:opacity-100"
+                        onClick={(e) => openCreateTicket(email.id, e)}
+                      >
+                        <Ticket className="w-3 h-3" />
+                        Create Ticket
+                      </Button>
+                    )}
                     <RowActionsMenu
                       entityName={email.id}
                       onView={() => navigate(`/email-support/${email.id}`)}
                       onEdit={() => toast.info(`Edit draft for ${email.id} coming soon`)}
                       onDelete={() => toast.success(`${email.id} deleted`)}
+                      extraActions={
+                        email.linkedTicketId
+                          ? [
+                              {
+                                label: `View Ticket #${email.linkedTicketId}`,
+                                onSelect: () => navigate(`/tickets/${email.linkedTicketId}`),
+                              },
+                            ]
+                          : [
+                              {
+                                label: 'Create Ticket',
+                                onSelect: () => openCreateTicket(email.id),
+                              },
+                            ]
+                      }
                     />
                   </div>
                 </div>
@@ -393,6 +372,18 @@ export function EmailSupportPanel({ embedded = false }: EmailSupportPanelProps) 
           </div>
         </div>
       </div>
+
+      <ConvertEmailToTicketDialog
+        thread={convertThread}
+        open={convertOpen}
+        onOpenChange={(open) => {
+          if (!open) setConvertThreadId(null);
+        }}
+        onCreated={(ticketId) => {
+          setConvertThreadId(null);
+          navigate(`/tickets/${ticketId}`);
+        }}
+      />
     </div>
   );
 }

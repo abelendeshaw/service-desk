@@ -28,6 +28,7 @@ import {
 } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { departments, fiscalYears, getCurrentFiscalYear, orgStructure } from "../lib/selamnewCore";
 
 type Section = "profile" | "security" | "appearance";
 
@@ -171,6 +172,51 @@ export function Settings() {
                           <span className="font-medium">{value}</span>
                         </div>
                       ))}
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Selamnew Core</CardTitle>
+                      <CardDescription>Fiscal year, departments, and org structure synced from Selamnew Core</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-4">
+                      <div className="rounded-md border p-3">
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Current Fiscal Year</div>
+                        <div className="mt-1 font-medium">{getCurrentFiscalYear().label}</div>
+                        <div className="text-[12px] text-muted-foreground">
+                          {getCurrentFiscalYear().startDate} — {getCurrentFiscalYear().endDate}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[12px] font-medium">Departments</div>
+                        <div className="flex flex-wrap gap-2">
+                          {departments.map((d) => (
+                            <Badge key={d.id} variant="outline" className="text-[11px]">{d.name}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[12px] font-medium">Organizational Structure</div>
+                        <div className="space-y-1 text-[13px] text-muted-foreground">
+                          {orgStructure.map((org) => (
+                            <div key={org.id}>
+                              <span className="font-medium text-foreground">{org.name}</span>
+                              {org.children?.map((child) => (
+                                <div key={child.id} className="ml-4">
+                                  └ {child.name}
+                                  {child.children?.map((team) => (
+                                    <div key={team.id} className="ml-4">└ {team.name}</div>
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        All fiscal years: {fiscalYears.map((fy) => fy.label).join(", ")}
+                      </p>
                     </CardContent>
                   </Card>
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { AlertCircle, ArrowLeft, FileText, Info } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -18,10 +18,12 @@ const KNOWN_COMPANIES = [
 
 export function CreateSLA() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const prefilledCompany = searchParams.get('company') ?? '';
   const { createSLA } = useServiceDesk();
 
   const [form, setForm] = useState({
-    companyName: '',
+    companyName: prefilledCompany,
     projectName: '',
     startDate: '',
     endDate: '',

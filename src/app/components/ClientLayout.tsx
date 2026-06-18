@@ -37,7 +37,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { useAuth } from "../store/authStore";
-import { useServiceDesk } from "../store/serviceDeskStore";
+import { useNotifications } from "../store/serviceDeskStore";
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -51,9 +51,9 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-const navItems = [
+const baseNavItems = [
   { name: "Dashboard", href: "/client", icon: LayoutDashboard, end: true },
-  { name: "My Tickets", href: "/client/tickets", icon: Ticket, end: false },
+  { name: "Tickets", href: "/client/tickets", icon: Ticket, end: false, dynamicLabel: true },
   { name: "Knowledge Base", href: "/client/knowledge", icon: BookOpen, end: false },
 ];
 
@@ -64,7 +64,7 @@ export function ClientLayout() {
   const notifRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { notifications, markNotificationsRead, markNotificationRead, dismissNotification } = useServiceDesk();
+  const { notifications, markNotificationsRead, markNotificationRead, dismissNotification } = useNotifications();
 
   useEffect(() => {
     if (!user) navigate("/login", { replace: true, state: { portal: "client" } });
@@ -113,7 +113,7 @@ export function ClientLayout() {
                 <MonitorSmartphone className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-sidebar-foreground text-sm font-semibold leading-tight truncate">Client Portal</div>
+                <div className="text-sidebar-foreground text-sm font-semibold leading-tight truncate">Selamnew Service Desk</div>
                 <div className="text-sidebar-foreground/60 text-xs leading-tight truncate">{user.company}</div>
               </div>
             </div>
@@ -132,13 +132,13 @@ export function ClientLayout() {
           {!sidebarCollapsed && (
             <div className="mb-2 px-2">
               <Badge variant="secondary" className="bg-violet-500/15 text-violet-700 border-violet-400/25 text-[10px]">
-                Client Workspace
+                Selamnew Service Desk
               </Badge>
             </div>
           )}
-          {navItems.map((item) => (
+          {baseNavItems.map((item) => (
             <NavLink
-              key={item.name}
+              key={item.href}
               to={item.href}
               end={item.end}
               className={({ isActive }) =>
@@ -155,7 +155,11 @@ export function ClientLayout() {
                     <div className="bg-violet-400 absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full" />
                   )}
                   <item.icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-violet-700 dark:text-sidebar-foreground" : ""}`} />
-                  {!sidebarCollapsed && <span className="text-[13px] font-medium truncate">{item.name}</span>}
+                  {!sidebarCollapsed && (
+                    <span className="text-[13px] font-medium truncate">
+                      {item.dynamicLabel ? user.company : item.name}
+                    </span>
+                  )}
                 </>
               )}
             </NavLink>
