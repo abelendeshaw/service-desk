@@ -30,14 +30,12 @@ export function ClientArticleDetail() {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("General");
   const [content, setContent] = useState("");
-  const [status, setStatus] = useState<"Draft" | "Published">("Draft");
 
   useEffect(() => {
     if (article && !editing) {
       setTitle(article.title);
       setCategory(article.category);
       setContent(article.content);
-      setStatus(article.status);
     }
   }, [article, editing]);
 
@@ -73,7 +71,7 @@ export function ClientArticleDetail() {
   }
 
   const handleSave = () => {
-    updateClientArticle({ id: article.id, title: title.trim(), category, content: content.trim(), status });
+    updateClientArticle({ id: article.id, title: title.trim(), category, content: content.trim(), status: "Published" });
     setEditing(false);
   };
 
@@ -89,9 +87,6 @@ export function ClientArticleDetail() {
               <div className="flex items-center gap-2">
                 <BookOpen className="text-primary w-4 h-4" />
                 <Badge variant="outline" className="text-[11px]">{article.category}</Badge>
-                <Badge variant={article.status === "Published" ? "default" : "secondary"} className="text-[11px]">
-                  {article.status}
-                </Badge>
               </div>
               {!editing ? (
                 <h1 className="text-sidebar-foreground mt-1 text-[20px] font-semibold tracking-tight">{article.title}</h1>
@@ -125,23 +120,13 @@ export function ClientArticleDetail() {
           <Card>
             <CardHeader><CardTitle className="text-base">Edit Article</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <Label className="mb-1.5 block text-[12px]">Category</Label>
                   <Select value={category} onValueChange={setCategory}>
                     <SelectTrigger className="h-9 text-[13px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="mb-1.5 block text-[12px]">Status</Label>
-                  <Select value={status} onValueChange={(v) => setStatus(v as "Draft" | "Published")}>
-                    <SelectTrigger className="h-9 text-[13px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Draft">Draft</SelectItem>
-                      <SelectItem value="Published">Published</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

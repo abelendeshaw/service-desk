@@ -71,7 +71,7 @@ export function ClientDashboard() {
   );
 
   const myArticles = useMemo(
-    () => clientArticles.filter((a) => a.company === user?.company && a.status === "Published"),
+    () => clientArticles.filter((a) => a.company === user?.company),
     [clientArticles, user?.company],
   );
 

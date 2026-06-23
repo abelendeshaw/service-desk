@@ -22,7 +22,6 @@ export function ClientKnowledgeBase() {
   const { clientArticles } = useServiceDesk();
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
-  const [statusFilter, setStatusFilter] = useState<"all" | "Published" | "Draft">("all");
 
   const myArticles = useMemo(
     () => clientArticles.filter((a) => a.company === user?.company),
@@ -31,7 +30,6 @@ export function ClientKnowledgeBase() {
 
   const filtered = useMemo(() => {
     return myArticles.filter((a) => {
-      if (statusFilter !== "all" && a.status !== statusFilter) return false;
       if (!search) return true;
       const q = search.toLowerCase();
       return (
@@ -40,7 +38,7 @@ export function ClientKnowledgeBase() {
         a.content.toLowerCase().includes(q)
       );
     });
-  }, [myArticles, search, statusFilter]);
+  }, [myArticles, search]);
 
   return (
     <div className="flex h-full flex-col bg-muted/30">
@@ -64,19 +62,6 @@ export function ClientKnowledgeBase() {
             onChange={(e) => setSearch(e.target.value)}
             className="h-8 bg-muted pl-9 pr-3 text-[13px]"
           />
-        </div>
-        <div className="flex items-center gap-1">
-          {(["all", "Published", "Draft"] as const).map((s) => (
-            <Button
-              key={s}
-              variant={statusFilter === s ? "secondary" : "ghost"}
-              size="sm"
-              className="h-7 text-[12px]"
-              onClick={() => setStatusFilter(s)}
-            >
-              {s === "all" ? "All" : s}
-            </Button>
-          ))}
         </div>
         <div className="ml-auto flex items-center gap-1 rounded-md border bg-muted p-0.5">
           <Button onClick={() => setViewMode("list")} variant={viewMode === "list" ? "secondary" : "ghost"} size="icon" className="size-7">
@@ -105,7 +90,6 @@ export function ClientKnowledgeBase() {
               <TableRow>
                 <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Article</TableHead>
                 <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Category</TableHead>
-                <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Status</TableHead>
                 <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Views</TableHead>
                 <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Updated</TableHead>
               </TableRow>
@@ -131,12 +115,6 @@ export function ClientKnowledgeBase() {
                   <TableCell className="px-5 py-3.5">
                     <Badge variant="outline" className="text-[11px]">{article.category}</Badge>
                   </TableCell>
-                  <TableCell className="px-5 py-3.5">
-                    <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${article.status === "Published" ? "text-emerald-600" : "text-muted-foreground"}`}>
-                      <span className={`size-1.5 rounded-full ${article.status === "Published" ? "bg-emerald-600" : "bg-muted-foreground"}`} />
-                      {article.status}
-                    </span>
-                  </TableCell>
                   <TableCell className="px-5 py-3.5 text-[12px] text-muted-foreground">{article.views}</TableCell>
                   <TableCell className="px-5 py-3.5 text-[12px] text-muted-foreground">{article.updatedAt.slice(0, 10)}</TableCell>
                 </TableRow>
@@ -158,11 +136,8 @@ export function ClientKnowledgeBase() {
                     <BookOpen className="w-3.5 h-3.5 text-violet-700" />
                   </div>
                   <h3 className="line-clamp-2 text-[13px] font-medium leading-snug">{article.title}</h3>
-                  <div className="mt-3 flex items-center justify-between">
+                  <div className="mt-3">
                     <Badge variant="outline" className="text-[10px]">{article.category}</Badge>
-                    <span className={`text-[11px] font-medium ${article.status === "Published" ? "text-emerald-600" : "text-muted-foreground"}`}>
-                      {article.status}
-                    </span>
                   </div>
                   <div className="mt-2 border-t pt-2 text-[11px] text-muted-foreground">
                     {article.views} views · {article.updatedAt.slice(0, 10)}

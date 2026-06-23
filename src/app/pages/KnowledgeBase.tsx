@@ -138,14 +138,13 @@ export function KnowledgeBase() {
                 <TableHead className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Support</TableHead>
                 <TableHead className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Company</TableHead>
                 <TableHead className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Project</TableHead>
-                <TableHead className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
                 <TableHead className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Updated</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody className="bg-background">
               {filteredTickets.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center">
+                  <td colSpan={5} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <FileSearch className="w-8 h-8 text-muted-foreground" />
                       <div>
@@ -191,12 +190,6 @@ export function KnowledgeBase() {
                     <TableCell className="px-5 py-3.5">
                       <Badge variant="outline" className="text-[11px]">{getTicketProjectName(t, slas)}</Badge>
                     </TableCell>
-                    <TableCell className="px-5 py-3.5">
-                      <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${article.status === 'Published' ? 'text-emerald-600' : 'text-muted-foreground'}`}>
-                        <div className={`h-1.5 w-1.5 rounded-full ${article.status === 'Published' ? 'bg-emerald-600' : 'bg-muted-foreground'}`} />
-                        {article.status}
-                      </span>
-                    </TableCell>
                     <TableCell className="px-5 py-3.5 text-[12px] text-muted-foreground">
                       {article.updatedAt.slice(0, 10)}
                     </TableCell>
@@ -229,23 +222,19 @@ export function KnowledgeBase() {
               return (
                 <Card key={t.id} className="group cursor-pointer p-4 transition-all hover:shadow-sm" onClick={() => navigate(`/knowledge/ticket/${t.id}`)}>
                   <CardContent className="p-0">
-                    <div className="mb-3 flex items-start justify-between">
+                    <div className="mb-3">
                       <Avatar className="size-8 rounded-md">
                         <AvatarFallback className="rounded-md text-[11px] font-semibold text-white" style={{ backgroundColor: avatarColors[idx % avatarColors.length] }}>
                           {ticketCompany(t).slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <div className={`mt-1 h-1.5 w-1.5 rounded-full ${article.status === 'Published' ? 'bg-emerald-600' : 'bg-muted-foreground'}`} />
                     </div>
                     <h3 className="mb-2 line-clamp-2 text-[13px] font-medium leading-snug">{article.title}</h3>
                     <div className="mb-2 flex flex-wrap gap-1">
                       <Badge variant="secondary" className="text-[10px]">{ticketCompany(t)}</Badge>
                       <Badge variant="outline" className="text-[10px]">{getTicketProjectName(t, slas)}</Badge>
                     </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <Badge variant="outline" className={`text-[10px] ${supportBadge.badgeClass}`}>{supportType}</Badge>
-                      <span className={`text-[11px] font-medium ${article.status === 'Published' ? 'text-emerald-600' : 'text-muted-foreground'}`}>{article.status}</span>
-                    </div>
+                    <Badge variant="outline" className={`text-[10px] ${supportBadge.badgeClass}`}>{supportType}</Badge>
                     <div className="mt-2 border-t pt-2 text-[11px] text-muted-foreground">#{t.id} · {article.updatedAt.slice(0, 10)}</div>
                   </CardContent>
                 </Card>

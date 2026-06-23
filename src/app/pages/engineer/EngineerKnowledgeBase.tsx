@@ -35,7 +35,6 @@ export function EngineerKnowledgeBase() {
   const { tickets, ticketArticles, getOrCreateTicketArticle, slas } = useServiceDesk();
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
-  const [statusFilter, setStatusFilter] = useState<"all" | "Published" | "Draft">("all");
   const [clientFilter, setClientFilter] = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
 
@@ -59,7 +58,6 @@ export function EngineerKnowledgeBase() {
   const filtered = useMemo(() => {
     return myTickets.filter((t) => {
       const article = ticketArticles[t.id] ?? draftTicketArticle(t);
-      if (statusFilter !== "all" && article.status !== statusFilter) return false;
       if (clientFilter !== "all" && ticketCompany(t) !== clientFilter) return false;
       if (projectFilter !== "all" && getTicketProjectName(t, slas) !== projectFilter) return false;
       if (!search) return true;
@@ -72,7 +70,7 @@ export function EngineerKnowledgeBase() {
         article.title.toLowerCase().includes(q)
       );
     });
-  }, [myTickets, search, statusFilter, clientFilter, projectFilter, ticketArticles, slas]);
+  }, [myTickets, search, clientFilter, projectFilter, ticketArticles, slas]);
 
   const handleCreateArticle = (ticketId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -127,19 +125,6 @@ export function EngineerKnowledgeBase() {
             ))}
           </SelectContent>
         </Select>
-        <div className="flex items-center gap-1">
-          {(["all", "Published", "Draft"] as const).map((s) => (
-            <Button
-              key={s}
-              variant={statusFilter === s ? "secondary" : "ghost"}
-              size="sm"
-              className="h-7 text-[12px]"
-              onClick={() => setStatusFilter(s)}
-            >
-              {s === "all" ? "All" : s}
-            </Button>
-          ))}
-        </div>
         <div className="ml-auto flex items-center gap-1 rounded-md border bg-muted p-0.5">
           <Button onClick={() => setViewMode("list")} variant={viewMode === "list" ? "secondary" : "ghost"} size="icon" className="size-7">
             <List className="w-3.5 h-3.5" />
@@ -171,7 +156,6 @@ export function EngineerKnowledgeBase() {
                 <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Client</TableHead>
                 <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Project</TableHead>
                 <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Support</TableHead>
-                <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Status</TableHead>
                 <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Updated</TableHead>
                 <TableHead className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">Actions</TableHead>
               </TableRow>
@@ -213,12 +197,6 @@ export function EngineerKnowledgeBase() {
                         {supportType}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-5 py-3.5">
-                      <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${article.status === "Published" ? "text-emerald-600" : "text-muted-foreground"}`}>
-                        <span className={`size-1.5 rounded-full ${article.status === "Published" ? "bg-emerald-600" : "bg-muted-foreground"}`} />
-                        {article.status}
-                      </span>
-                    </TableCell>
                     <TableCell className="px-5 py-3.5 text-[12px] text-muted-foreground">
                       {article.updatedAt.slice(0, 10)}
                     </TableCell>
@@ -231,7 +209,7 @@ export function EngineerKnowledgeBase() {
                           onClick={(e) => handleCreateArticle(t.id, e)}
                         >
                           <Pencil className="w-3 h-3" />
-                          {article.status === "Draft" ? "Edit" : "Update"}
+                          Edit
                         </Button>
                       </div>
                     </TableCell>
@@ -254,7 +232,7 @@ export function EngineerKnowledgeBase() {
                   onClick={() => navigate(`/engineer/knowledge/ticket/${t.id}`)}
                 >
                   <CardContent className="p-0">
-                    <div className="mb-3 flex items-start justify-between">
+                    <div className="mb-3">
                       <Avatar className="size-8 rounded-md">
                         <AvatarFallback
                           className="rounded-md text-[11px] font-semibold text-white"
@@ -263,9 +241,6 @@ export function EngineerKnowledgeBase() {
                           {t.project.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <span className={`text-[11px] font-medium ${article.status === "Published" ? "text-emerald-600" : "text-muted-foreground"}`}>
-                        {article.status}
-                      </span>
                     </div>
                     <h3 className="mb-2 line-clamp-2 text-[13px] leading-snug font-medium">{article.title || t.subject}</h3>
                     <div className="mb-2 flex flex-wrap gap-1">

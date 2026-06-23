@@ -189,7 +189,6 @@ export function ArticleDetail() {
         authorColor: "#6c757d",
         createdDate: new Date(kb.createdAt).toLocaleDateString(),
         updatedDate: new Date(kb.updatedAt).toLocaleDateString(),
-        status: kb.status,
         readTime: "—",
         content: kb.content,
       }
@@ -250,10 +249,6 @@ export function ArticleDetail() {
                 <Clock className="w-3.5 h-3.5" />
                 {data.readTime}
               </div>
-              <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-semibold ${data.status === 'Published' ? 'bg-emerald-100 text-emerald-700' : 'bg-white/70 text-sidebar-muted-foreground'}`}>
-                <div className={`h-1.5 w-1.5 rounded-full ${data.status === 'Published' ? 'bg-emerald-500' : 'bg-sidebar-muted-foreground'}`} />
-                {data.status}
-              </span>
             </div>
 
             {/* Title */}
@@ -362,13 +357,6 @@ export function ArticleDetail() {
                     <div className="flex items-center gap-1 text-[12px] text-muted-foreground">
                       <Eye className="w-3.5 h-3.5 text-muted-foreground" />
                       {data.views} total views
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] text-muted-foreground mb-0.5">Status</div>
-                    <div className={`flex items-center gap-1.5 text-[12px] font-medium ${data.status === 'Published' ? 'text-emerald-600' : 'text-muted-foreground'}`}>
-                      <div className={`w-1.5 h-1.5 rounded-full ${data.status === 'Published' ? 'bg-emerald-600' : 'bg-muted-foreground'}`} />
-                      {data.status}
                     </div>
                   </div>
                 </div>

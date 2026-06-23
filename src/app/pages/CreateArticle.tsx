@@ -108,7 +108,7 @@ export function CreateArticle() {
     setShowAddCategory(false);
   };
 
-  const handlePublish = () => {
+  const handleSave = () => {
     if (!ticketId || !title.trim()) return;
     const content = editorRef.current?.innerHTML ?? '';
     updateTicketArticle({
@@ -117,7 +117,7 @@ export function CreateArticle() {
       content,
       status: 'Published',
     });
-    toast.success('Article published');
+    toast.success('Article saved');
     navigate(paths.ticketView(ticketId));
   };
 
@@ -180,8 +180,8 @@ export function CreateArticle() {
             </h1>
             <p className="text-sidebar-muted-foreground mt-0.5 text-[13px]">
               {ticket
-                ? 'Document the resolution and publish to the knowledge base'
-                : 'Fill in the details to publish a new article'}
+                ? 'Document the resolution for the knowledge base'
+                : 'Fill in the details to save a new article'}
             </p>
           </div>
         </div>
@@ -484,14 +484,14 @@ export function CreateArticle() {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={() => toast.success('Draft duplicated')}>
-                    Duplicate draft
+                  <DropdownMenuItem onSelect={() => toast.success('Article duplicated')}>
+                    Duplicate article
                   </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => toast.success('Draft exported')}>
+                  <DropdownMenuItem onSelect={() => toast.success('Article exported')}>
                     Export markdown
                   </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => toast.success('Draft archived')} variant="destructive">
-                    Archive draft
+                  <DropdownMenuItem onSelect={() => toast.success('Article archived')} variant="destructive">
+                    Archive article
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -527,11 +527,11 @@ export function CreateArticle() {
               Cancel
             </button>
             <button
-              onClick={handlePublish}
+              onClick={handleSave}
               className="h-9 px-5 text-[13px] font-medium text-primary-foreground bg-primary rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
               disabled={!title.trim() || !ticketId}
             >
-              Publish Article
+              Save Article
             </button>
           </div>
         </div>
